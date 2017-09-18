@@ -6,6 +6,7 @@ output:
     keep_md: yes
 ---
 
+## Introduction 
 
 This is the peer-graded assignment for the Reproducible Research Course by Johns Hopkins University at Coursera, which is the 5th out of 10 courses in the [Data Science Specialization](https://www.coursera.org/specializations/jhu-data-science). 
 
@@ -41,7 +42,11 @@ knitr::opts_chunk$set(
     include = TRUE,
     message = FALSE,
     warning = FALSE,
-    knitr.table.format = "markdown"
+    knitr.table.format = "markdown", 
+    tidy.opts = list(width.cutoff = 80), 
+    fig.align = "center", 
+    fig.path = "figures/", 
+    highlight = TRUE, tidy.opts = 
 )
 
 ```
@@ -49,7 +54,10 @@ knitr::opts_chunk$set(
 
 ## Loading and preprocessing the data
 
-Then, we have to load. 
+    Instructions: 
+    Show any code that is needed to
+    1. Load the data (i.e. read.csv())
+    2. Process/transform the data (if necessary) into a format suitable for your analysis
 
 In the original repository, the data set is compressed in a ZIP file, which we unzip —if necessary— and load the resulting CSV file into the working environment. 
 
@@ -74,10 +82,14 @@ if (!file.exists("activity.csv") &
 
 ## What is mean total number of steps taken per day?
 
+    Instrunctions:
+    For this part of the assignment, you can ignore the missing values in the dataset.  
+    1. Make a histogram of the total number of steps taken each day.
+    2. Calculate and report the **mean** and **median** total number of steps taken per day.
+
 We want to know the distribution of the number of steps taken each day, which we can observe in a histogram generated using ggplot2. 
 
-In the figure below, we can observe the histogram of the number of steps taken each day, with an overlayed density plot; we want to know basic statistics about the number of steps, which are also depicted in the graphic: the mean number of steps taken is `r mean.median.steps$Mean` and the median number of steps taken is `r mean.median.steps$Median`.
-
+In the figure below, we can observe the histogram of the number of steps taken each day, with an overlayed density plot.
 
 ```{r histogram}
 steps.day.df <- activity.data %>%
@@ -114,16 +126,33 @@ ggplot(data = steps.day.df,
     scale_linetype_discrete(name = "Number of Steps") +
     theme_bw() 
 
-rm(mean.median.steps, steps.day.df)
+```
+
+
+We want to know basic statistics about the number of steps, which are also depicted in the following table: 
+
+
+```{r descriptive statistics}
+steps.day.df %>%
+    summarise(
+    "Mean number of steps taken per day" = round(mean(steps, na.rm = TRUE)),
+    "Median number of steps taken per day" = round(median(steps, na.rm = TRUE))
+    ) %>%
+    kable(align = "c")
     
 ```
 
 
+
 ## What is the average daily activity pattern?
+
+    Instructions:
+    1. Make a time series plot (i.e. `type = "l"`) of the 5-minute interval (x-axis) and the average number of steps taken, averaged across all days (y-axis).
+    2. Which 5-minute interval, on average across all the days in the dataset, contains the maximum number of steps?
 
 We also want to know the daily activity pattern, which is how many steps —averaged across all days— are taken during the day.
 
-For this purpose, we create a line plot, using ggplot2, shown below. In the figure, we can observe a peak (maximum value) in the number of steps taken, `r max.steps$steps`, in the interval `r max.steps$interval`.
+For this purpose, we create a line plot, using ggplot2, shown below. 
 
 
 ```{r activity pattern}
@@ -148,20 +177,23 @@ max.steps <- avg.steps.day[which.max(avg.steps.day$steps),]
                    alpha = 0.5, 
                    colour = "salmon") +
     theme_bw()
-    
-#rm(avg.steps.day)
-    
+
 ```
+
+
+In the figure, we can observe a peak (maximum value) in the number of steps taken, `r max.steps$steps`, in the interval `r max.steps$interval`.
 
 
 ## Imputing missing values
 
-1. Calculate and report the total number of missing values in the data set (i.e. the total number of rows with `NA`s). 
+    Instructions:
+    Note that there are a number of days/intervals where there are missing values (coded as `NA`). The presence of missing days may introduce bias into some calculations or summaries of the data.
+    1. Calculate and report the total number of missing values in the dataset (i.e. the total number of rows with `NA`s).
+    2. Devise a strategy for filling in all of the missing values in the dataset. The strategy does not need to be sophisticated. For example, you could use the mean/median for that day, or the mean for that 5-minute interval, etc.
+    3. Create a new dataset that is equal to the original dataset but with the missing data filled in.
 
-Imputation of missing values is an important step in the data analysis process. First, we want to know how many missing our data set has; in this case, there are `r rowSums(nas.df)` missing values, in total. The detail of the missing values for each variable is shown in the table below. 
 
-
-```{r}
+```{r na count}
 nas.df <- activity.data %>% 
     sapply(is.na) %>% 
     tbl_df() %>%
@@ -177,19 +209,17 @@ nas.df %>%
 
 ```
 
-2. Devising a strategy for filling in all of the missing values in the data set. The strategy does not need to be sophisticated. For example, you could use the mean/median for that day, or the mean for that 5-minute interval, etc.
-
-3. Create a new data set that is equal to the original data set but with the missing data filled in.
+First, we want to know how many missing our data set has; in this case, there are `r rowSums(nas.df)` missing values, in total. The detail of the missing values for each variable is shown in the table above
 
 In the assignment instructions, we are required to devise a simple strategy to impute missing values. The strategy that we'll follow is, indeed, simple: 
 
-    a. Get the trimmed mean of the number of steps (exclude the 10% most extreme observations) by 5-min interval. 
-    b. Joining the original dataset with NAs and the dataset of mean steps by 5-min interval. 
-    c. Substitute NAs with the corresponding mean value.
-    d. Cleaning the data frame. 
+a. Get the trimmed mean of the number of steps (exclude the 10% most extreme observations) by 5-min interval. 
+b. Joining the original data set with NAs and the data set of mean steps by 5-min interval. 
+c. Substitute NAs with the corresponding mean value.
+d. Cleaning the data frame. 
 
 
-```{r}
+```{r na imputation}
 non.NA <- activity.data %>%
     group_by(interval) %>%
     summarise(steps = round(mean(steps,
@@ -208,10 +238,10 @@ imp.activity.data <- full_join(x = activity.data,
 ```
 
 
-4. Make a histogram of the total number of steps taken each day and calculate and report the **mean** and **median** total number of steps taken per day. Do these values differ from the estimates from the first part of the assignment? What is the impact of imputing missing data on the estimates of the total daily number of steps?
+The histogram of the total number of steps taken per day doesn't change much. 
 
 
-```{r}
+```{r histogram of complete steps}
 steps.day.df <- imp.activity.data %>%
     group_by(date) %>%
     summarise(steps = sum(steps))
@@ -249,7 +279,9 @@ ggplot(data = steps.day.df,
 
 ```
 
-```{r}
+With the chosen imputation strategy, there were no changes in the median and mean number of the steps taken per day. 
+
+```{r descriptive statistics of complete df}
 steps.day.df %>%
     summarise(
     "Mean number of steps taken per day" = round(mean(steps, na.rm = TRUE)),
@@ -257,13 +289,18 @@ steps.day.df %>%
     ) %>%
     kable(align = "c")
 
-rm(steps.day.df)
 ```
 
 
 ## Are there differences in activity patterns between weekdays and weekends?
 
-```{r diff activity patterns weekday/end}
+    Instructions:
+    For this part the `weekdays()` function may be of some help here. Use the dataset with the filled-in missing values for this part.
+    1. Create a new factor variable in the dataset with two levels -- "weekday" and "weekend" indicating whether a given date is a weekday or weekend day.
+    2. Make a panel plot containing a time series plot (i.e. type = "l") of the 5-minute interval (x-axis) and the average number of steps taken, averaged across all weekday days or weekend days (y-axis).
+
+```{r diff activity patterns weekday-end}
+
 avg.steps.weekday <- imp.activity.data %>%
     mutate(weekday.end = ifelse(
     test = weekdays(date, abbreviate = TRUE) %in% c("Sat", "Sun"),
@@ -271,15 +308,39 @@ avg.steps.weekday <- imp.activity.data %>%
     no = "Weekday"
     )) %>%
     group_by(interval, weekday.end) %>%
-    summarise(steps = mean(steps, na.rm = TRUE))
-    
-    ggplot(data = avg.steps.weekday, mapping = aes(x = interval, y = steps)) +
-    geom_line(colour = "steelblue", alpha = 0.9) +
+    summarise(steps = round(mean(steps, na.rm = TRUE)))
+
+maxima.steps <- avg.steps.weekday %>% 
+    group_by(weekday.end) %>% 
+    top_n(1, steps)
+
+ggplot(data = avg.steps.weekday, 
+       mapping = aes(x = interval, 
+                     y = steps)) +
+    geom_line(colour = "steelblue", 
+              alpha = 0.9) +
     facet_grid(weekday.end ~ .) +
-    ggtitle(
-    list(title = "Activity Patterns in Weekdays and Weekends", y = "Number of Steps", x = "Interval")
-    ) +
+    geom_point(data = maxima.steps, 
+               mapping = aes(x = interval, 
+                             y = steps, 
+                             group = weekday.end), 
+               alpha = 0.5, 
+               size = 4, 
+               colour = "salmon"
+               ) +
+    ggtitle(list(title = "Activity Patterns in Weekdays and Weekends", 
+         y = "Number of Steps", 
+         x = "Interval")) +
+    
     theme_bw()
 
 ```
+
+The maxima number of steps during weekend and weekdays are notoriously different, as can be seen in the figure above. The peak of activity during the weekdays is `r maxima.steps[maxima.steps$weekday.end == "Weekday",]$steps` steps, which happens in the `r maxima.steps[maxima.steps$weekday.end == "Weekday",]$interval` interval; while the peak of activity during the weekends is `r maxima.steps[maxima.steps$weekday.end == "Weekend",]$steps` steps, which happens in the `r maxima.steps[maxima.steps$weekday.end == "Weekend",]$interval` interval. 
+
+```{r clean-environ, include=FALSE, message=FALSE, warning=FALSE}
+rm(list = ls()[!ls() == "activity.data"])
+
+```
+
 
