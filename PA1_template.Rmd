@@ -45,8 +45,8 @@ knitr::opts_chunk$set(
     knitr.table.format = "markdown", 
     tidy.opts = list(width.cutoff = 80), 
     fig.align = "center", 
-    fig.path = "figures/", 
-    highlight = TRUE, tidy.opts = 
+    fig.path = "figure/", 
+    highlight = TRUE
 )
 
 ```

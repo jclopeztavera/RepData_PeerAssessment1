@@ -40,7 +40,8 @@ knitr::opts_chunk$set(
     knitr.table.format = "markdown", 
     tidy.opts = list(width.cutoff = 80), 
     fig.align = "center", 
-    fig.path = "figures/"
+    fig.path = "figure/", 
+    highlight = TRUE
 )
 ```
 
@@ -97,7 +98,7 @@ ggplot(data = steps.day.df, mapping = aes(x = steps, y = ..density..)) + geom_hi
     scale_linetype_discrete(name = "Number of Steps") + theme_bw()
 ```
 
-<img src="figures/histogram-1.png" style="display: block; margin: auto;" />
+<img src="figure/histogram-1.png" style="display: block; margin: auto;" />
 
 
 We want to know basic statistics about the number of steps, which are also depicted in the following table: 
@@ -143,7 +144,7 @@ ggplot(data = avg.steps.day, mapping = aes(x = interval, y = steps)) + geom_line
     y = steps), size = 4, alpha = 0.5, colour = "salmon") + theme_bw()
 ```
 
-<img src="figures/activity pattern-1.png" style="display: block; margin: auto;" />
+<img src="figure/activity pattern-1.png" style="display: block; margin: auto;" />
 
 
 In the figure, we can observe a peak (maximum value) in the number of steps taken, 206, in the interval 835.
@@ -216,7 +217,7 @@ ggplot(data = steps.day.df, mapping = aes(x = steps, y = ..density..)) + geom_hi
     scale_linetype_discrete(name = "Number of Steps") + theme_bw()
 ```
 
-<img src="figures/histogram of complete steps-1.png" style="display: block; margin: auto;" />
+<img src="figure/histogram of complete steps-1.png" style="display: block; margin: auto;" />
 
 With the chosen imputation strategy, there were no changes in the median and mean number of the steps taken per day. 
 
@@ -257,7 +258,7 @@ ggplot(data = avg.steps.weekday, mapping = aes(x = interval, y = steps)) + geom_
 theme_bw()
 ```
 
-<img src="figures/diff activity patterns weekday-end-1.png" style="display: block; margin: auto;" />
+<img src="figure/diff activity patterns weekday-end-1.png" style="display: block; margin: auto;" />
 
 The maxima number of steps during weekend and weekdays are notoriously different, as can be seen in the figure above. The peak of activity during the weekdays is 228 steps, which happens in the 835 interval; while the peak of activity during the weekends is 164 steps, which happens in the 915 interval. 
 
