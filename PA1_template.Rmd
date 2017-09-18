@@ -3,11 +3,22 @@ title: "Reproducible Research: Peer Assessment 1"
 author: "Juan C. López Tavera"
 output: 
   html_document:
-    keep_md: true
+    keep_md: yes
 ---
 
 
+This is the peer-graded assignment for the Reproducible Research Course by Johns Hopkins University at Coursera, which is the 5th out of 10 courses in the [Data Science Specialization](https://www.coursera.org/specializations/jhu-data-science). 
+
+The objective of this assignment is to make a reproducible report of an individual's activity over a two month period, measured in number of steps. The report will be generated using [knitr](https://yihui.name/knitr/). 
+
+As provided in Professor Peng's [original repository](https://github.com/rdpeng/RepData_PeerAssessment1), this repository is self-contained — all data and assignment instructions necessary to reproduce this work are available in the same place. 
+
+
 ### Setting up the  report
+
+First, we need to setup the report options using, and install —if necessary— and load all the required packages to successfully complete this assignment. 
+
+
 ```{r setup, include=TRUE, message=FALSE, warning=FALSE}
 
 ## Loading the necessary package for reproducing the assingment
@@ -29,6 +40,7 @@ knitr::opts_chunk$set(
     results = "markup",
     include = TRUE,
     message = FALSE,
+    warning = FALSE,
     knitr.table.format = "markdown"
 )
 
@@ -36,6 +48,13 @@ knitr::opts_chunk$set(
 
 
 ## Loading and preprocessing the data
+
+Then, we have to load. 
+
+In the original repository, the data set is compressed in a ZIP file, which we unzip —if necessary— and load the resulting CSV file into the working environment. 
+
+No pre-processing was necessary for this data set, as it is already tidy. 
+
 
 ```{r unzip-load-preprocess data}
 
@@ -55,22 +74,182 @@ if (!file.exists("activity.csv") &
 
 ## What is mean total number of steps taken per day?
 
-```{r histogram warning=FALSE}
+We want to know the distribution of the number of steps taken each day, which we can observe in a histogram generated using ggplot2. 
+
+In the figure below, we can observe the histogram of the number of steps taken each day, with an overlayed density plot; we want to know basic statistics about the number of steps, which are also depicted in the graphic: the mean number of steps taken is `r mean.median.steps$Mean` and the median number of steps taken is `r mean.median.steps$Median`.
+
+
+```{r histogram}
 steps.day.df <- activity.data %>%
     group_by(date) %>%
     summarise(steps = sum(steps))
+
+mean.median.steps <- steps.day.df %>%
+    summarise(
+        Mean = round(mean(steps, na.rm = TRUE)),
+    Median = round(median(steps, na.rm = TRUE))
+    ) %>% 
+    gather()
     
-ggplot(data = steps.day.df, mapping = aes(x = steps)) +
-    geom_histogram(fill = "steelblue",
+ggplot(data = steps.day.df, 
+       mapping = aes(x = steps, 
+                     y = ..density..)) +
+    geom_histogram(aes(weight = steps),
+                   fill = "steelblue",
                    colour = "white",
                    alpha = 0.8) +
-    ggtitle(list(title = "Total number of steps taken each day", x = "Steps", y = "Count")) +
+    geom_density(fill = "steelblue",
+                 colour = NA,
+                 alpha = 0.2) +
+    ggtitle(list(
+    title = "Total Number of Steps",
+    subtitle = "Distribution of Total Number of Steps Taken Each Day",
+                 x = "Steps", 
+                 y = "Density")) +
+    geom_vline(data = mean.median.steps, 
+               aes(xintercept = value, linetype = key), 
+               size = 0.5,
+               alpha = 0.8,
+               colour = c("salmon", "royalblue")) +
+    scale_linetype_discrete(name = "Number of Steps") +
     theme_bw() 
+
+rm(mean.median.steps, steps.day.df)
     
 ```
 
 
-```{r mean & median steps by day}
+## What is the average daily activity pattern?
+
+We also want to know the daily activity pattern, which is how many steps —averaged across all days— are taken during the day.
+
+For this purpose, we create a line plot, using ggplot2, shown below. In the figure, we can observe a peak (maximum value) in the number of steps taken, `r max.steps$steps`, in the interval `r max.steps$interval`.
+
+
+```{r activity pattern}
+avg.steps.day <- activity.data %>%
+    group_by(interval) %>%
+    summarise(steps = round(mean(steps, na.rm = TRUE))) %>%
+    filter(!is.nan(steps))
+
+max.steps <- avg.steps.day[which.max(avg.steps.day$steps),]
+    
+    ggplot(data = avg.steps.day, mapping = aes(x = interval, y = steps)) +
+    geom_line(size = 0.5,
+    colour = "steelblue",
+    alpha = 0.9) +
+        ggtitle(list(title = "Daily Activity Pattern", 
+                     subtitle = "Average number of steps taken by 5-min interval, across all days",
+                     y = "Number of Steps", 
+                     x = "Interval")) +
+        geom_point(data = max.steps, 
+                   mapping = aes(x = interval, y = steps), 
+                   size = 4, 
+                   alpha = 0.5, 
+                   colour = "salmon") +
+    theme_bw()
+    
+#rm(avg.steps.day)
+    
+```
+
+
+## Imputing missing values
+
+1. Calculate and report the total number of missing values in the data set (i.e. the total number of rows with `NA`s). 
+
+Imputation of missing values is an important step in the data analysis process. First, we want to know how many missing our data set has; in this case, there are `r rowSums(nas.df)` missing values, in total. The detail of the missing values for each variable is shown in the table below. 
+
+
+```{r}
+nas.df <- activity.data %>% 
+    sapply(is.na) %>% 
+    tbl_df() %>%
+    summarise(Steps = sum(steps), 
+              Date = sum(date), 
+              Interval = sum(interval))
+
+row.names(nas.df) <- c("Number of NAs")
+
+nas.df %>% 
+    kable(caption = "Number of Missing Values of each Variable",
+          align = "c")
+
+```
+
+2. Devising a strategy for filling in all of the missing values in the data set. The strategy does not need to be sophisticated. For example, you could use the mean/median for that day, or the mean for that 5-minute interval, etc.
+
+3. Create a new data set that is equal to the original data set but with the missing data filled in.
+
+In the assignment instructions, we are required to devise a simple strategy to impute missing values. The strategy that we'll follow is, indeed, simple: 
+
+    a. Get the trimmed mean of the number of steps (exclude the 10% most extreme observations) by 5-min interval. 
+    b. Joining the original dataset with NAs and the dataset of mean steps by 5-min interval. 
+    c. Substitute NAs with the corresponding mean value.
+    d. Cleaning the data frame. 
+
+
+```{r}
+non.NA <- activity.data %>%
+    group_by(interval) %>%
+    summarise(steps = round(mean(steps,
+    na.rm = TRUE,
+    trim = 0.05)))
+    
+    
+imp.activity.data <- full_join(x = activity.data,
+                           y = non.NA,
+                           by = "interval") %>%
+    mutate(steps = ifelse(test = is.na(steps.x),
+                          yes = steps.y,
+                          no = steps.x)) %>%
+    select(steps, date, interval)
+    
+```
+
+
+4. Make a histogram of the total number of steps taken each day and calculate and report the **mean** and **median** total number of steps taken per day. Do these values differ from the estimates from the first part of the assignment? What is the impact of imputing missing data on the estimates of the total daily number of steps?
+
+
+```{r}
+steps.day.df <- imp.activity.data %>%
+    group_by(date) %>%
+    summarise(steps = sum(steps))
+
+mean.median.steps <- steps.day.df %>%
+    summarise(
+        Mean = round(mean(steps, na.rm = TRUE)),
+    Median = round(median(steps, na.rm = TRUE))
+    ) %>% 
+    gather()
+    
+ggplot(data = steps.day.df, 
+       mapping = aes(x = steps, 
+                     y = ..density..)) +
+    geom_histogram(aes(weight = steps),
+                   fill = "steelblue",
+                   colour = "white",
+                   alpha = 0.8) +
+    geom_density(fill = "steelblue",
+                 colour = NA,
+                 alpha = 0.2) +
+    ggtitle(list(
+    title = "Total Number of Steps",
+    subtitle = "Distribution of Total Number of Steps Taken Each Day",
+                 x = "Steps", 
+                 y = "Density")) +
+    geom_vline(data = mean.median.steps, 
+               aes(xintercept = value, linetype = key), 
+               size = 0.5,
+               alpha = 0.8,
+               colour = c("salmon", "royalblue")) +
+    scale_linetype_discrete(name = "Number of Steps") +
+    theme_bw() 
+    
+
+```
+
+```{r}
 steps.day.df %>%
     summarise(
     "Mean number of steps taken per day" = round(mean(steps, na.rm = TRUE)),
@@ -78,35 +257,14 @@ steps.day.df %>%
     ) %>%
     kable(align = "c")
 
+rm(steps.day.df)
 ```
-
-
-## What is the average daily activity pattern?
-```{r activity pattern}
-avg.steps.day <- activity.data %>%
-    group_by(interval) %>%
-    summarise(steps = mean(steps, na.rm = TRUE)) %>%
-    filter(!is.nan(steps))
-    
-    ggplot(data = avg.steps.day, mapping = aes(x = interval, y = steps)) +
-    geom_line(size = 0.5,
-    colour = "steelblue",
-    alpha = 0.9) +
-    ggtitle(list(title = "Daily Activity Pattern", y = "Number of Steps", x = "Interval")) +
-    theme_bw()
-    
-```
-
-
-
-## Imputing missing values
-
 
 
 ## Are there differences in activity patterns between weekdays and weekends?
 
-```{r}
-avg.steps.weekday <- activity.data %>%
+```{r diff activity patterns weekday/end}
+avg.steps.weekday <- imp.activity.data %>%
     mutate(weekday.end = ifelse(
     test = weekdays(date, abbreviate = TRUE) %in% c("Sat", "Sun"),
     yes = "Weekend",
