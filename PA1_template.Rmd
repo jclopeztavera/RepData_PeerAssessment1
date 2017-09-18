@@ -1,20 +1,101 @@
 ---
 title: "Reproducible Research: Peer Assessment 1"
+author: "Juan C. López Tavera"
 output: 
   html_document:
     keep_md: true
 ---
 
 
+### Setting up the  report
+```{r setup, include=TRUE, message=FALSE, warning=FALSE}
+
+## Loading the necessary package for reproducing the assingment
+if (!require(knitr)) {
+    install.packages("knitr")
+}
+library(knitr)
+
+if (!require(tidyverse)) {
+    install.packages("tidyverse")
+}
+library(tidyverse)
+
+## Setting up all code chunks according to the assignment specs
+knitr::opts_chunk$set(
+    eval = TRUE,
+    echo = TRUE,
+    tidy = TRUE,
+    results = "markup",
+    include = TRUE,
+    message = FALSE,
+    knitr.table.format = "markdown"
+)
+
+```
+
+
 ## Loading and preprocessing the data
 
+```{r unzip-load-preprocess data}
+
+## If necessary, unzipping the data file, and loading it
+if (!file.exists("activity.csv") &
+    file.exists("activity.zip")) {
+    unzip("activity.zip")
+    activity.data <- read_csv(file = "activity.csv")
+} else if (file.exists("activity.csv")) {
+    activity.data <- read_csv(file = "activity.csv")
+} else {
+    message("Activity Monitoring Data (default) from Rep Research course was not found")
+}
+
+```
 
 
 ## What is mean total number of steps taken per day?
 
+```{r histogram warning=FALSE}
+steps.day.df <- activity.data %>%
+    group_by(date) %>%
+    summarise(steps = sum(steps))
+    
+ggplot(data = steps.day.df, mapping = aes(x = steps)) +
+    geom_histogram(fill = "steelblue",
+                   colour = "white",
+                   alpha = 0.8) +
+    ggtitle(list(title = "Total number of steps taken each day", x = "Steps", y = "Count")) +
+    theme_bw() 
+    
+```
+
+
+```{r mean & median steps by day}
+steps.day.df %>%
+    summarise(
+    "Mean number of steps taken per day" = round(mean(steps, na.rm = TRUE)),
+    "Median number of steps taken per day" = round(median(steps, na.rm = TRUE))
+    ) %>%
+    kable(align = "c")
+
+```
 
 
 ## What is the average daily activity pattern?
+```{r activity pattern}
+avg.steps.day <- activity.data %>%
+    group_by(interval) %>%
+    summarise(steps = mean(steps, na.rm = TRUE)) %>%
+    filter(!is.nan(steps))
+    
+    ggplot(data = avg.steps.day, mapping = aes(x = interval, y = steps)) +
+    geom_line(size = 0.5,
+    colour = "steelblue",
+    alpha = 0.9) +
+    ggtitle(list(title = "Daily Activity Pattern", y = "Number of Steps", x = "Interval")) +
+    theme_bw()
+    
+```
 
 
 
@@ -23,3 +104,24 @@ output:
 
 
 ## Are there differences in activity patterns between weekdays and weekends?
+
+```{r}
+avg.steps.weekday <- activity.data %>%
+    mutate(weekday.end = ifelse(
+    test = weekdays(date, abbreviate = TRUE) %in% c("Sat", "Sun"),
+    yes = "Weekend",
+    no = "Weekday"
+    )) %>%
+    group_by(interval, weekday.end) %>%
+    summarise(steps = mean(steps, na.rm = TRUE))
+    
+    ggplot(data = avg.steps.weekday, mapping = aes(x = interval, y = steps)) +
+    geom_line(colour = "steelblue", alpha = 0.9) +
+    facet_grid(weekday.end ~ .) +
+    ggtitle(
+    list(title = "Activity Patterns in Weekdays and Weekends", y = "Number of Steps", x = "Interval")
+    ) +
+    theme_bw()
+
+```
+
