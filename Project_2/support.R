@@ -5,6 +5,16 @@ library(stringdist)
 
 rm(list = ls()[!ls() %in% c("storm_data", "test", "ongoing")])
 
+URL <-
+  "https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2FStormData.csv.bz2"
+path <- paste0(getwd(), "/repdata%2Fdata%2FStormData.csv.bz2")
+csvfile <- gsub(pattern = ".bz2",
+                replacement = "",
+                x = path)
+storm_data <- data.table::fread(input = csvfile,
+                                showProgress = FALSE,
+                                verbose = FALSE)
+
 ## Helper function
 capwords <- function(s, strict = FALSE) {
   cap <- function(s)
@@ -30,12 +40,31 @@ storm_data <- left_join(x = states,
                         y = storm_data,
                         by = c("state.abb" = "STATE"))
 
+storm_data$BGN_DATE <-
+  gsub(
+    pattern = " 0:00:00",
+    replacement = "",
+    x = storm_data$BGN_DATE,
+    fixed = TRUE
+  )
 
-begin_date <- paste(storm_data$BGN_DATE, storm_data$BGN_TIME) %>%
-  gsub(pattern = "0:00:00",
-       replacement = "",
-       x = .) %>%
-  as.Date(format = "%m/%d/%Y %H%M", tz = storm_data$TIME_ZONE)
+begin_date <-
+  as.Date(x = storm_data$BGN_DATE,
+          format = "%m/%d/%Y",
+          tz = storm_data$TIME_ZONE)
+
+storm_data$END_DATE <-
+  gsub(
+    pattern = " 0:00:00",
+    replacement = "",
+    x = storm_data$END_DATE,
+    fixed = TRUE
+  )
+
+end_date <-
+  as.Date(x = storm_data$END_DATE,
+          format = "%m/%d/%Y",
+          tz = storm_data$TIME_ZONE)
 
 official_events <- c(
   "Astronomical Low Tide",
@@ -109,17 +138,18 @@ events$clean_events <-
 events$clean_events <- gsub(pattern = "tstm",
                             replacement = "thunderstorm",
                             x = events$clean_events)
-events$clean_events[grepl(pattern = "fld|urban\\/sml stream fld|urban\\/small stream flooding|stream flood", x = events$clean_events)]  <- "Flood"
+events$clean_events[grepl(pattern = "fld|urban\\/sml stream fld|urban\\/small stream flooding|stream flood", x = events$clean_events)]  <-
+  "Flood"
 events$clean_events <- gsub(pattern = "winds|wnd",
                             replacement = "wind",
                             x = events$clean_events)
-events$clean_events[grepl(pattern = "frost|freeze|freezing|frost",
+events$clean_events[grepl(pattern = "frost|freeze|freezing|frost|icy roads",
                           x = events$clean_events,
                           ignore.case = TRUE)] <- "Frost/Freeze"
 events$clean_events[grepl(pattern = "cold weather",
                           x = events$clean_events,
                           ignore.case = TRUE)] <- "Winter Weather"
-events$clean_events[grepl(pattern = "cold|chill|record low|cool|low temperature",
+events$clean_events[grepl(pattern = "cold|chill|record low|cool|low temperature|Hypothermia",
                           x = events$clean_events,
                           ignore.case = TRUE)] <-
   "Extreme Cold/Wind Chill"
@@ -127,14 +157,12 @@ events$clean_events[grepl(pattern = "hurricane|typhoon",
                           x = events$clean_events,
                           ignore.case = TRUE)] <-
   "Hurricane (Typhoon)"
-
 events$clean_events[grepl(pattern = "ligth snow",
                           x = events$clean_events,
                           ignore.case = TRUE)] <- "sleet"
 events$clean_events[grepl(pattern = "snow",
                           x = events$clean_events,
                           ignore.case = TRUE)] <- "Heavy Snow"
-
 events$clean_events[grepl(pattern = "dry microburst|downburst|burst",
                           x = events$clean_events,
                           ignore.case = TRUE)] <-
@@ -167,9 +195,9 @@ events$clean_events[grepl(pattern = "coastal storm",
 events$clean_events[grepl(pattern = "funnel",
                           x = events$clean_events,
                           ignore.case = TRUE)] <- "funnel cloud"
-events$clean_events[grepl(pattern = "river",
+events$clean_events[grepl(pattern = "river|slide|dam|ice floes",
                           x = events$clean_events,
-                          ignore.case = TRUE)] <- "Lakeshore Flood"
+                          ignore.case = TRUE)] <- "Flash Flood"
 events$clean_events[grepl(pattern = "fog",
                           x = events$clean_events,
                           ignore.case = TRUE)] <- "Dense Fog"
@@ -180,17 +208,11 @@ events$clean_events[grepl(pattern = "beach",
                           x = events$clean_events,
                           ignore.case = TRUE)] <- "coastal"
 
-
 others <- c(
   "apache county",
   "none",
   "summary",
   "unseasonably wet",
-  "icy roads",
-  "Hypothermia/Exposure",
-  "DAM BREAK",
-  "ice floes",
-  "slide",
   "monthly temperature",
   "record temperature",
   "red flag",
@@ -214,11 +236,45 @@ min_lcs <- apply(X = lcs_dist, MARGIN = 1, FUN = which.min)
 
 events$clean_events <- official_events[min_lcs]
 
+human_damage <- storm_data$INJURIES + storm_data$FATALITIES
+
+storm_data$PROPDMGEXP <- tolower(storm_data$PROPDMGEXP)
+storm_data$CROPDMGEXP <- tolower(storm_data$CROPDMGEXP)
+
+propdmg_exp_raw <- storm_data$PROPDMGEXP %>% unique
+cropdmg_exp_raw <- storm_data$CROPDMGEXP %>% unique
+
+dmg_exp_raw <-
+  c(propdmg_exp_raw, cropdmg_exp_raw) %>% unique %>% sort
+dmg_exp_raw <-
+  dmg_exp_raw[grepl(pattern = "[[:alnum:]]", x = dmg_exp_raw)]
+
+b <- 9
+h <- 2
+k <- 3
+m <- 6
+dmg_exp_str <- paste("10^", dmg_exp_raw, sep = "")
+dmg_exp <- sapply(parse(text = dmg_exp_str), eval)
+
+prop_dmg_exp_table <-
+  data_frame(PROPDMGEXP = dmg_exp_raw, prop_dmg_exp = dmg_exp)
+crop_dmg_exp_table <-
+  data_frame(CROPDMGEXP = dmg_exp_raw, crop_dmg_exp = dmg_exp)
+
+storm_data <- storm_data %>%
+  right_join(x = prop_dmg_exp_table) %>%
+  right_join(x = crop_dmg_exp_table)
+
+####################
+
 ongoing <- storm_data %>% transmute(
   id = REFNUM,
   state = state.name,
   state_abbr = state.abb,
   county = capwords(COUNTYNAME, strict = TRUE),
   begin_date = begin_date,
-  event_type = events$clean_events
+  end_date = end_date,
+  event_type = events$clean_events,
+  human_damage = human_damage,
+  material_damage = (PROPDMG * prop_dmg_exp) + (CROPDMG * crop_dmg_exp)
 )
