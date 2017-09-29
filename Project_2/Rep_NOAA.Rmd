@@ -1,0 +1,160 @@
+---
+title: "Finding the most severe storms in the US"
+author: "Juan C. López Tavera"
+date: "9/22/2017"
+output: html_document
+---
+
+
+```{r setup, include=TRUE, message=FALSE}
+# Setting up the report
+## Loading the necessary package for reproducing the assingment
+if (!require(data.table)) {
+    install.packages("data.table")
+}
+if (!require(R.utils)) {
+    install.packages("R.utils")
+}
+
+if (!require(knitr)) {
+    install.packages("knitr")
+}
+library(knitr)
+
+if (!require(tidyverse))
+    install.packages("tidyverse")
+library(tidyverse)
+
+if (!require(datasets)) {
+    install.packages("datasets")
+}
+library(datasets)
+
+## Setting up all code chunks according to the assignment specs
+knitr::opts_chunk$set(
+    eval = TRUE,
+    echo = TRUE,
+    tidy = TRUE,
+    results = "markup",
+    include = TRUE,
+    message = FALSE,
+    warning = FALSE,
+    knitr.table.format = "markdown",
+    tidy.opts = list(width.cutoff = 80),
+    fig.align = "center",
+    fig.path = "figure/",
+    highlight = TRUE, 
+    cache = TRUE
+)
+
+```
+
+
+## Introduction
+
+This is a reproducible research report made with knitr for completing the requirements of the JHU's Reproducible Research Course. 
+
+This documents describe the exploration of U.S. National Oceanic and Atmospheric Administration's (NOAA) storm database, which tracks weather phenomena, their characteristics and casualties caused by them. 
+
+The main objective of this data exploration is to answer the questions:
+
+1. Across the USA, which types of events are most harmful with respect to population health?
+2. Across the USA, which types of events have the greatest economic consequences?
+
+
+## Data downloading and reading
+
+First, if necessary, we donwload the data BZ2 file from the link provided in the course assignment page; then, we read the data into the working environment, and conveniently cache the result of the computation.  
+
+```{r data loading, cache=TRUE, message=FALSE}
+URL <-
+  "https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2FStormData.csv.bz2"
+path <- paste0(getwd(), "/repdata%2Fdata%2FStormData.csv.bz2")
+csvfile <- gsub(pattern = ".bz2",
+                replacement = "",
+                x = path)
+
+if (!file.exists(path)) {
+  download.file(url = URL,
+                destfile = path)
+  R.utils::bunzip2(path, remove = FALSE)
+  storm_data <- data.table::fread(input = csvfile, 
+                                  showProgress = FALSE, 
+                                  verbose = FALSE)
+  
+} else if (!file.exists(csvfile)) {
+  R.utils::bunzip2(path, remove = FALSE)
+  storm_data <- data.table::fread(input = csvfile, 
+                                  showProgress = FALSE, 
+                                  verbose = FALSE)
+  
+} else {
+  storm_data <- data.table::fread(input = csvfile, 
+                                  showProgress = FALSE, 
+                                  verbose = FALSE)
+}
+
+```
+
+
+## Data Exploration
+
+We need to know our dataset, so we explore its structure: 
+
+```{r data structure, include=TRUE, eval=FALSE}
+str(storm_data)
+
+```
+
+The output from the code above is very lengthy, given the number of variables in our dataset, so we don't include it for aesthetic purposes. 
+
+We have a tibble data frame of `r nrow(storm_data)` rows by `r ncol(storm_data)` columns, with `r sum(is.na(storm_data))` missing values, which are `r round(mean(is.na(storm_data))*100, 2)`% of the observations.
+
+The classes of the NOAA storm database, `storm_data`, and the proportion of missing values for each column are shown in the following table:
+
+```{r data processing}
+
+classes <-
+sapply(storm_data, class) %>% 
+        as_data_frame() %>% 
+        rownames_to_column("Variable") %>% 
+        select(Variable, Type = value)
+
+classes$`Percent of NAs` <- sapply(storm_data, function(x)
+        round(mean(is.na(x)) * 100, 2))
+
+kable(classes %>% 
+              arrange(desc(`Percent of NAs`)) %>%
+              filter(`Percent of NAs` != 0)
+              )
+
+```
+
+The percentage of missing values per variable goes from 0% of NAs to as much as 100% of NAs! Variables with 0% of NAs are ommited from the table above for aesthetic purposes. 
+
+
+
+
+## Results
+
+### Most harmful meteorological events
+
+Across the United States, which types of events (as indicated in the `EVTYPE` variable) are most harmful with respect to population health?
+
+```{r harmful events}
+
+```
+
+
+### Most costly meteorological events
+
+Across the United States, which types of events have the greatest economic consequences?
+
+```{r costly events}
+
+```
+
+
+
+
+
