@@ -13,7 +13,8 @@ csvfile <- gsub(pattern = ".bz2",
                 x = path)
 storm_data <- data.table::fread(input = csvfile,
                                 showProgress = FALSE,
-                                verbose = FALSE)
+                                verbose = FALSE,
+                                na.strings = c("", " ", "NA"))
 
 ## Helper function
 capwords <- function(s, strict = FALSE) {
