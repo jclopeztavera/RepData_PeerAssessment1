@@ -2,35 +2,31 @@
 title: "Finding the most severe storms in the US"
 author: "Juan C. López Tavera"
 date: "9/22/2017"
-output: html_document
+output: 
+  html_document: 
+    keep_md: yes
 ---
 
 
 ```{r setup, include=TRUE, message=FALSE}
-# Setting up the report
-## Loading the necessary package for reproducing the assingment
-if (!require(data.table)) {
-    install.packages("data.table")
-}
-if (!require(R.utils)) {
-    install.packages("R.utils")
+## Loading the required packages for reproducing the report
+pkgs <-
+  c("data.table",
+    "R.utils",
+    "tidyverse",
+    "knitr",
+    "datasets",
+    "stringdist")
+
+f <- unlist(lapply(pkgs, require, character.only = TRUE))
+if (length(f[!f] > 0)) {
+  install.packages(pkgs[!f])
 }
 
-if (!require(knitr)) {
-    install.packages("knitr")
-}
-library(knitr)
+invisible(sapply(X = pkgs, FUN = library, character.only = TRUE))
 
-if (!require(tidyverse))
-    install.packages("tidyverse")
-library(tidyverse)
 
-if (!require(datasets)) {
-    install.packages("datasets")
-}
-library(datasets)
-
-## Setting up all code chunks according to the assignment specs
+## Setting up all code chunks according to the assignment specifications
 knitr::opts_chunk$set(
     eval = TRUE,
     echo = TRUE,
@@ -62,11 +58,12 @@ The main objective of this data exploration is to answer the questions:
 2. Across the USA, which types of events have the greatest economic consequences?
 
 
-## Data downloading and reading
+## Data reading
 
-First, if necessary, we donwload the data BZ2 file from the link provided in the course assignment page; then, we read the data into the working environment, and conveniently cache the result of the computation.  
+First, if necessary, we download the data BZ2 file from the link provided in the course assignment page; then, we read the data into the working environment, and conveniently cache the result of the computation.  
 
 ```{r data loading, cache=TRUE, message=FALSE}
+## Downloading the data from the URL in the course assignment page
 URL <-
   "https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2FStormData.csv.bz2"
 path <- paste0(getwd(), "/repdata%2Fdata%2FStormData.csv.bz2")
@@ -74,65 +71,110 @@ csvfile <- gsub(pattern = ".bz2",
                 replacement = "",
                 x = path)
 
+## If the file does not exist, we download it, 
+## If it exist and it hasn't been uncompressed, we uncompress it
+## Then we read it into the R environment.
 if (!file.exists(path)) {
   download.file(url = URL,
                 destfile = path)
   R.utils::bunzip2(path, remove = FALSE)
-  storm_data <- data.table::fread(input = csvfile, 
-                                  showProgress = FALSE, 
-                                  verbose = FALSE)
+  storm_data <- data.table::fread(input = csvfile,
+                                showProgress = FALSE,
+                                verbose = FALSE, 
+                                na.strings = c("", " ", "NA"))
   
 } else if (!file.exists(csvfile)) {
   R.utils::bunzip2(path, remove = FALSE)
-  storm_data <- data.table::fread(input = csvfile, 
-                                  showProgress = FALSE, 
-                                  verbose = FALSE)
+  storm_data <- data.table::fread(input = csvfile,
+                                showProgress = FALSE,
+                                verbose = FALSE, 
+                                na.strings = c("", " ", "NA"))
   
 } else {
-  storm_data <- data.table::fread(input = csvfile, 
-                                  showProgress = FALSE, 
-                                  verbose = FALSE)
+  storm_data <- data.table::fread(input = csvfile,
+                                showProgress = FALSE,
+                                verbose = FALSE, 
+                                na.strings = c("", " ", "NA"))
 }
 
 ```
 
-
-## Data Exploration
-
-We need to know our dataset, so we explore its structure: 
-
-```{r data structure, include=TRUE, eval=FALSE}
-str(storm_data)
-
-```
-
-The output from the code above is very lengthy, given the number of variables in our dataset, so we don't include it for aesthetic purposes. 
+## Dataset Structure
 
 We have a tibble data frame of `r nrow(storm_data)` rows by `r ncol(storm_data)` columns, with `r sum(is.na(storm_data))` missing values, which are `r round(mean(is.na(storm_data))*100, 2)`% of the observations.
 
-The classes of the NOAA storm database, `storm_data`, and the proportion of missing values for each column are shown in the following table:
+### Variables of interest
 
-```{r data processing}
+The NOAA storm data set we're using has many variables, but not all of them fall into the scope of this report, which focuses on knowing the human and economic damages caused by reported weather events. Knowing beforehand which variables we're using will speed-up the data processing and analysis.
 
-classes <-
-sapply(storm_data, class) %>% 
-        as_data_frame() %>% 
-        rownames_to_column("Variable") %>% 
-        select(Variable, Type = value)
+From the `r ncol(storm_data)` variables in the data set, we're only focusing on: 
 
-classes$`Percent of NAs` <- sapply(storm_data, function(x)
-        round(mean(is.na(x)) * 100, 2))
+1. `REFNUM`: The reference number assigned to each weather event.
+2. `STATE`: The state name abbreviation where each weather event occurred. 
+3. `COUNTYNAME`: The county where each weather event occurred. 
+4. `BGN_DATE`: The reported date when each weather event was was first noticeable.
+5. `END_DATE`: The reported date when each weather event ceased. 
+6. `EVTYPE`: The classification of each weather event as one of the 48 types defined by the NOAA.
+7. `FATALITIES`: The number of direct and indirect human lives lost due to each weather event. 
+8. `INJURIES`: The number of reported injuries caused by each weather event.
+9. `PROPDMG`: The cost of property damage in USD (raw)
+10. `PROPDMGEXP`: The powers of 10 by which `PROPDMG` shall be multiplied to arrive at the final property damage cost in USD.
+11. `CROPDMG`: The cost of agricultural losses/damage in USD (raw)
+12. `CROPDMGEXP`: The powers of 10 by which `CROPDMG` shall be multiplied to arrive at the final property damage cost in USD.
 
-kable(classes %>% 
-              arrange(desc(`Percent of NAs`)) %>%
-              filter(`Percent of NAs` != 0)
-              )
+Now, we subset the NOAA data set: 
+
+```{r subsetting the NOAA dataset}
+
+storm_data <- storm_data %>%
+  select(
+  REFNUM,
+  STATE,
+  COUNTYNAME,
+  BGN_DATE,
+  END_DATE,
+  EVTYPE,
+  FATALITIES,
+  INJURIES,
+  PROPDMG,
+  PROPDMGEXP,
+  CROPDMG,
+  CROPDMGEXP
+  )
 
 ```
 
-The percentage of missing values per variable goes from 0% of NAs to as much as 100% of NAs! Variables with 0% of NAs are ommited from the table above for aesthetic purposes. 
+So we have a tibble data frame —subset of the NOAA data set provided at the Reproducible Research Course— of `r nrow(storm_data)` rows by `r ncol(storm_data)` columns, with `r sum(is.na(storm_data))` missing values, which are `r round(mean(is.na(storm_data))*100, 2)`% of the observations.
 
+The classes of our NOAA storm database, `storm_data`, and the proportion of missing values for each column are shown in the following table:
 
+```{r data processing}
+## We make a tbl of column classes, the percentage of NAs; and display it
+classes <-
+  sapply(storm_data, class) %>%
+  as_data_frame() %>%
+  rownames_to_column("Variable") %>%
+  select(Variable, Type = value)
+## Percentage of missing values, rounded to two decimals
+classes$`Percent of NAs` <- paste(sapply(storm_data, function(x)
+        round(mean(is.na(x)) * 100, 2)), "%")
+
+## Number of unique values
+classes$`Unique Values` <- sapply(storm_data, function(x)length(unique(x)))
+
+## Print table with nice formatting
+kable(x = classes, align = c("l", "c", "r", "r"))
+
+```
+
+Looking at the table, we can notice a couple of major oddities: 
+
+1. The number of unique States in `STATE` is 72, while it should be 50.
+2. The number of different events `EVTYPE` is 985, while the NOAA has defined just 48.
+
+What causes such incongruities? How can we make our dataset more consistent with the phenomena it characterizes? These are questions that we shall answer in the Data Procesing section. 
+
+## Data Processing 
 
 
 ## Results
