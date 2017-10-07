@@ -7,8 +7,20 @@ output:
     keep_md: yes
 ---
 
+## Introduction
 
-```{r setup, include=TRUE, message=FALSE}
+This is a reproducible research report made with knitr for completing the requirements of the Reproducible Research Course by Johns Hopkins University at Coursera. 
+
+This documents describe the exploration of U.S. National Oceanic and Atmospheric Administration's (NOAA) storm database, which tracks weather phenomena, their characteristics and casualties caused by them. 
+
+The main objective of this data exploration is to answer the questions:
+
+1. Across the USA, which types of events are most harmful with respect to population health?
+2. Across the USA, which types of events have the greatest economic consequences?
+
+#### Project Setup
+
+```{r project setup, include=TRUE, message=FALSE, warning=FALSE}
 ## Loading the required packages for reproducing the report
 pkgs <-
   c("data.table",
@@ -46,16 +58,13 @@ knitr::opts_chunk$set(
 ```
 
 
-## Introduction
+#### Session Info
 
-This is a reproducible research report made with knitr for completing the requirements of the JHU's Reproducible Research Course. 
+```{r sesion info}
 
-This documents describe the exploration of U.S. National Oceanic and Atmospheric Administration's (NOAA) storm database, which tracks weather phenomena, their characteristics and casualties caused by them. 
+sessionInfo()
 
-The main objective of this data exploration is to answer the questions:
-
-1. Across the USA, which types of events are most harmful with respect to population health?
-2. Across the USA, which types of events have the greatest economic consequences?
+```
 
 
 ## Data reading
@@ -171,10 +180,77 @@ Looking at the table, we can notice a couple of major oddities:
 
 1. The number of unique States in `STATE` is 72, while it should be 50.
 2. The number of different events `EVTYPE` is 985, while the NOAA has defined just 48.
+3. It is already known that `PROPDMG` and `CROPDMG` are not expressed as final USD amounts, but need to be multiplied by the factors `PROPDMG` and `PROPDMG` respectively. `PROPDMG` and `PROPDMG` should be of equal length though. 
 
 What causes such incongruities? How can we make our dataset more consistent with the phenomena it characterizes? These are questions that we shall answer in the Data Procesing section. 
 
 ## Data Processing 
+
+#### Solving the state abbreviations issue
+
+As mentioned above, we need to investigate why to we have 72 states instead of 50. Conveniently, the `datasets` package includes the full and abbreviated names of US states, which we can use to match with our dataset abbreviations. Let's take a closer look at the non-matching state abbreviations:
+
+```{r state names and abbreviations}
+
+data(state)
+states <- cbind.data.frame(state.abb, state.name)
+
+setdiff(x = storm_data$STATE, y = states$state.abb)
+
+```
+
+We can tell that some of those abbreviations are US District, Territories, water bodies and regions. We manually record those values and check if there are still any unmatches. 
+
+```{r}
+
+places <-
+  c(
+  DC = "District of Columbia",
+  PR = "Puerto Rico",
+  AS = "American Samoa",
+  GU = "Guam",
+  MH = "Marshall Islands",
+  VI = "Virgin Islands",
+  LO = "Lake Ontario",
+  LE = "Lake Erie",
+  LS = "Lake Superior",
+  LM = "Lake Michigan",
+  LH = "Lake Huron",
+  LS = "Lake St. Clair",
+  AN = "Atlantic North",
+  AM = "Atlantic South",
+  GM = "Gulf of Mexico",
+  PH = "Hawaii Waters",
+  PZ = "Pacific East"
+  )
+
+state.abb <- c(state.abb, names(places))
+state.name <- c(state.name, places)
+states <- cbind.data.frame(state.abb, state.name)
+
+setdiff(states$state.abb, storm_data$STATE)
+
+```
+
+All state (or places, should we say) abbreviations in our dataset now have a matching pair.
+
+#### Solving the too many event types issue
+
+There are 985 different values in the `EVTYPE` variable; there should only be 48. We have to, somehow, categorize the remaining 937 unique values as one of the official 48 weather event types. 
+
+A lot of the surplus in event types is due to typos (human errors). Also, there are inconsistencies in data entry, which can be noticed by reading the data documentation provided by the NOAA; e.g. coding an event as "Microdust", while, in the manual, is categorized as "Thunderstorm Winds". 
+
+We can solve many of these inconsistencies by matching them with the closest official `EVTYPE` string. We do this using the longest common substring method:
+
+"The longest common substring (method='lcs') is defined as the longest string that can be obtained by pairing characters from a and b while keeping the order of characters intact. The lcs-distance is defined as the number of unpaired characters. The distance is equivalent to the edit distance allowing only deletions and insertions, each with weight one."
+
+* van der Loo M (2014). “The stringdist package for approximate string matching.” _The R Journal_, *6*, pp. 111-122. <URL: https://CRAN.R-project.org/package=stringdist>.
+
+In this case, given an official event type, we pair it with the closest element of `EVTYPE`. The drawback of this approach is that we got many "false positives" -- like "fog" being matched to "flood", instead of "dense fog".
+
+Given that there are many values in `EVTYPE` that are semantically close to the official event types, but not string-distance close, and the false positive matches, there was still a lot of manual work to do. 
+
+
 
 
 ## Results
@@ -197,6 +273,6 @@ Across the United States, which types of events have the greatest economic conse
 ```
 
 
-
+## References
 
 
