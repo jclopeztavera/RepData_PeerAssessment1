@@ -1,22 +1,23 @@
-# Finding the most severe storms in the US
-Juan C. López Tavera  
-9/22/2017  
+Finding the most severe storms in the US
+================
+Juan C. López Tavera
+9/22/2017
 
-## Introduction
+Introduction
+------------
 
-This is a reproducible research report made with knitr for completing the requirements of the Reproducible Research Course by Johns Hopkins University at Coursera. 
+This is a reproducible research report made with knitr for completing the requirements of the Reproducible Research Course by Johns Hopkins University at Coursera.
 
-This documents describe the exploration of U.S. National Oceanic and Atmospheric Administration's (NOAA) storm database, which tracks weather phenomena, their characteristics and casualties caused by them. 
+This documents describe the exploration of U.S. National Oceanic and Atmospheric Administration's (NOAA) storm database, which tracks weather phenomena, their characteristics and casualties caused by them.
 
 The main objective of this data exploration is to answer the questions:
 
-1. Across the USA, which types of events are most harmful with respect to population health?
-2. Across the USA, which types of events have the greatest economic consequences?
+1.  Across the USA, which types of events are most harmful with respect to population health?
+2.  Across the USA, which types of events have the greatest economic consequences?
 
 #### Project Setup
 
-
-```r
+``` r
 ## Loading the required packages for reproducing the report
 pkgs <-
   c("data.table",
@@ -52,58 +53,53 @@ knitr::opts_chunk$set(
 )
 ```
 
-
 #### Session Info
 
-
-```r
+``` r
 sessionInfo()
 ```
 
-```
-## R version 3.4.1 (2017-06-30)
-## Platform: x86_64-apple-darwin15.6.0 (64-bit)
-## Running under: macOS High Sierra 10.13
-## 
-## Matrix products: default
-## BLAS: /Library/Frameworks/R.framework/Versions/3.4/Resources/lib/libRblas.0.dylib
-## LAPACK: /Library/Frameworks/R.framework/Versions/3.4/Resources/lib/libRlapack.dylib
-## 
-## locale:
-## [1] en_US.UTF-8/en_US.UTF-8/en_US.UTF-8/C/en_US.UTF-8/en_US.UTF-8
-## 
-## attached base packages:
-## [1] stats     graphics  grDevices utils     datasets  methods   base     
-## 
-## other attached packages:
-##  [1] bindrcpp_0.2       stringdist_0.9.4.6 knitr_1.17        
-##  [4] dplyr_0.7.4        purrr_0.2.3        readr_1.1.1       
-##  [7] tidyr_0.7.1        tibble_1.3.4       ggplot2_2.2.1     
-## [10] tidyverse_1.1.1    R.utils_2.5.0      R.oo_1.21.0       
-## [13] R.methodsS3_1.7.1  data.table_1.10.4 
-## 
-## loaded via a namespace (and not attached):
-##  [1] Rcpp_0.12.13     formatR_1.5      cellranger_1.1.0 compiler_3.4.1  
-##  [5] plyr_1.8.4       bindr_0.1        forcats_0.2.0    tools_3.4.1     
-##  [9] digest_0.6.12    lubridate_1.6.0  jsonlite_1.5     evaluate_0.10.1 
-## [13] nlme_3.1-131     gtable_0.2.0     lattice_0.20-35  pkgconfig_2.0.1 
-## [17] rlang_0.1.2      psych_1.7.8      yaml_2.1.14      parallel_3.4.1  
-## [21] haven_1.1.0      xml2_1.1.1       httr_1.3.1       stringr_1.2.0   
-## [25] hms_0.3          rprojroot_1.2    grid_3.4.1       glue_1.1.1      
-## [29] R6_2.2.2         readxl_1.0.0     foreign_0.8-69   rmarkdown_1.6   
-## [33] modelr_0.1.1     reshape2_1.4.2   magrittr_1.5     scales_0.5.0    
-## [37] backports_1.1.1  htmltools_0.3.6  rvest_0.3.2      assertthat_0.2.0
-## [41] mnormt_1.5-5     colorspace_1.3-2 stringi_1.1.5    lazyeval_0.2.0  
-## [45] munsell_0.4.3    broom_0.4.2
-```
+    ## R version 3.4.1 (2017-06-30)
+    ## Platform: x86_64-apple-darwin15.6.0 (64-bit)
+    ## Running under: macOS High Sierra 10.13
+    ## 
+    ## Matrix products: default
+    ## BLAS: /Library/Frameworks/R.framework/Versions/3.4/Resources/lib/libRblas.0.dylib
+    ## LAPACK: /Library/Frameworks/R.framework/Versions/3.4/Resources/lib/libRlapack.dylib
+    ## 
+    ## locale:
+    ## [1] en_US.UTF-8/en_US.UTF-8/en_US.UTF-8/C/en_US.UTF-8/en_US.UTF-8
+    ## 
+    ## attached base packages:
+    ## [1] stats     graphics  grDevices utils     datasets  methods   base     
+    ## 
+    ## other attached packages:
+    ##  [1] stringdist_0.9.4.6 knitr_1.17         dplyr_0.7.4       
+    ##  [4] purrr_0.2.3        readr_1.1.1        tidyr_0.7.1       
+    ##  [7] tibble_1.3.4       ggplot2_2.2.1      tidyverse_1.1.1   
+    ## [10] R.utils_2.5.0      R.oo_1.21.0        R.methodsS3_1.7.1 
+    ## [13] data.table_1.10.4 
+    ## 
+    ## loaded via a namespace (and not attached):
+    ##  [1] Rcpp_0.12.13     formatR_1.5      cellranger_1.1.0 compiler_3.4.1  
+    ##  [5] plyr_1.8.4       bindr_0.1        forcats_0.2.0    tools_3.4.1     
+    ##  [9] digest_0.6.12    lubridate_1.6.0  jsonlite_1.5     evaluate_0.10.1 
+    ## [13] nlme_3.1-131     gtable_0.2.0     lattice_0.20-35  pkgconfig_2.0.1 
+    ## [17] rlang_0.1.2      psych_1.7.8      yaml_2.1.14      parallel_3.4.1  
+    ## [21] haven_1.1.0      bindrcpp_0.2     xml2_1.1.1       httr_1.3.1      
+    ## [25] stringr_1.2.0    hms_0.3          rprojroot_1.2    grid_3.4.1      
+    ## [29] glue_1.1.1       R6_2.2.2         readxl_1.0.0     foreign_0.8-69  
+    ## [33] rmarkdown_1.6    modelr_0.1.1     reshape2_1.4.2   magrittr_1.5    
+    ## [37] scales_0.5.0     backports_1.1.1  htmltools_0.3.6  rvest_0.3.2     
+    ## [41] assertthat_0.2.0 mnormt_1.5-5     colorspace_1.3-2 stringi_1.1.5   
+    ## [45] lazyeval_0.2.0   munsell_0.4.3    broom_0.4.2
 
+Data reading
+------------
 
-## Data reading
+First, if necessary, we download the data BZ2 file from the link provided in the course assignment page; then, we read the data into the working environment, and conveniently cache the result of the computation.
 
-First, if necessary, we download the data BZ2 file from the link provided in the course assignment page; then, we read the data into the working environment, and conveniently cache the result of the computation.  
-
-
-```r
+``` r
 ## Downloading the data from the URL in the course assignment page
 URL <- "https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2FStormData.csv.bz2"
 path <- paste0(getwd(), "/repdata%2Fdata%2FStormData.csv.bz2")
@@ -128,7 +124,8 @@ if (!file.exists(path)) {
 }
 ```
 
-## Dataset Structure
+Dataset Structure
+-----------------
 
 We have a tibble data frame of 902297 rows by 37 columns, with 6645765 missing values, which are 19.91% of the observations.
 
@@ -136,25 +133,24 @@ We have a tibble data frame of 902297 rows by 37 columns, with 6645765 missing v
 
 The NOAA storm data set we're using has many variables, but not all of them fall into the scope of this report, which focuses on knowing the human and economic damages caused by reported weather events. Knowing beforehand which variables we're using will speed-up the data processing and analysis.
 
-From the 37 variables in the data set, we're only focusing on: 
+From the 37 variables in the data set, we're only focusing on:
 
-1. `REFNUM`: The reference number assigned to each weather event.
-2. `STATE`: The state name abbreviation where each weather event occurred. 
-3. `COUNTYNAME`: The county where each weather event occurred. 
-4. `BGN_DATE`: The reported date when each weather event was was first noticeable.
-5. `END_DATE`: The reported date when each weather event ceased. 
-6. `EVTYPE`: The classification of each weather event as one of the 48 types defined by the NOAA.
-7. `FATALITIES`: The number of direct and indirect human lives lost due to each weather event. 
-8. `INJURIES`: The number of reported injuries caused by each weather event.
-9. `PROPDMG`: The cost of property damage in USD (raw)
+1.  `REFNUM`: The reference number assigned to each weather event.
+2.  `STATE`: The state name abbreviation where each weather event occurred.
+3.  `COUNTYNAME`: The county where each weather event occurred.
+4.  `BGN_DATE`: The reported date when each weather event was was first noticeable.
+5.  `END_DATE`: The reported date when each weather event ceased.
+6.  `EVTYPE`: The classification of each weather event as one of the 48 types defined by the NOAA.
+7.  `FATALITIES`: The number of direct and indirect human lives lost due to each weather event.
+8.  `INJURIES`: The number of reported injuries caused by each weather event.
+9.  `PROPDMG`: The cost of property damage in USD (raw)
 10. `PROPDMGEXP`: The powers of 10 by which `PROPDMG` shall be multiplied to arrive at the final property damage cost in USD.
 11. `CROPDMG`: The cost of agricultural losses/damage in USD (raw)
 12. `CROPDMGEXP`: The powers of 10 by which `CROPDMG` shall be multiplied to arrive at the final property damage cost in USD.
 
-Now, we subset the NOAA data set: 
+Now, we subset the NOAA data set:
 
-
-```r
+``` r
 storm_data <- storm_data %>% select(REFNUM, STATE, COUNTYNAME, BGN_DATE, END_DATE, 
     EVTYPE, FATALITIES, INJURIES, PROPDMG, PROPDMGEXP, CROPDMG, CROPDMGEXP)
 ```
@@ -163,8 +159,7 @@ So we have a tibble data frame —subset of the NOAA data set provided at the Re
 
 The classes of our NOAA storm database, `storm_data`, and the proportion of missing values for each column are shown in the following table:
 
-
-```r
+``` r
 ## We make a tbl of column classes, the percentage of NAs; and display it
 classes <- sapply(storm_data, class) %>% as_data_frame() %>% rownames_to_column("Variable") %>% 
     select(Variable, Type = value)
@@ -179,54 +174,49 @@ classes$`Unique Values` <- sapply(storm_data, function(x) length(unique(x)))
 kable(x = classes, align = c("l", "c", "r", "r"))
 ```
 
+| Variable   |    Type   |  Percent of NAs|  Unique Values|
+|:-----------|:---------:|---------------:|--------------:|
+| REFNUM     |  numeric  |             0 %|         902297|
+| STATE      | character |             0 %|             72|
+| COUNTYNAME | character |          0.18 %|          29601|
+| BGN\_DATE  | character |             0 %|          16335|
+| END\_DATE  | character |         26.98 %|           6663|
+| EVTYPE     | character |             0 %|            985|
+| FATALITIES |  numeric  |             0 %|             52|
+| INJURIES   |  numeric  |             0 %|            200|
+| PROPDMG    |  numeric  |             0 %|           1390|
+| PROPDMGEXP | character |         51.64 %|             19|
+| CROPDMG    |  numeric  |             0 %|            432|
+| CROPDMGEXP | character |         68.54 %|              9|
 
+Looking at the table, we can notice a couple of major oddities:
 
-Variable        Type       Percent of NAs   Unique Values
------------  -----------  ---------------  --------------
-REFNUM         numeric                0 %          902297
-STATE         character               0 %              72
-COUNTYNAME    character            0.18 %           29601
-BGN_DATE      character               0 %           16335
-END_DATE      character           26.98 %            6663
-EVTYPE        character               0 %             985
-FATALITIES     numeric                0 %              52
-INJURIES       numeric                0 %             200
-PROPDMG        numeric                0 %            1390
-PROPDMGEXP    character           51.64 %              19
-CROPDMG        numeric                0 %             432
-CROPDMGEXP    character           68.54 %               9
+1.  The number of unique States in `STATE` is 72, while it should be 50.
+2.  The number of different events `EVTYPE` is 985, while the NOAA has defined just 48.
+3.  It is already known that `PROPDMG` and `CROPDMG` are not expressed as final USD amounts, but need to be multiplied by the factors `PROPDMG` and `PROPDMG` respectively. `PROPDMG` and `PROPDMG` should be of equal length though.
 
-Looking at the table, we can notice a couple of major oddities: 
+What causes such incongruities? How can we make our dataset more consistent with the phenomena it characterizes? These are questions that we shall answer in the Data Procesing section.
 
-1. The number of unique States in `STATE` is 72, while it should be 50.
-2. The number of different events `EVTYPE` is 985, while the NOAA has defined just 48.
-3. It is already known that `PROPDMG` and `CROPDMG` are not expressed as final USD amounts, but need to be multiplied by the factors `PROPDMG` and `PROPDMG` respectively. `PROPDMG` and `PROPDMG` should be of equal length though. 
-
-What causes such incongruities? How can we make our dataset more consistent with the phenomena it characterizes? These are questions that we shall answer in the Data Procesing section. 
-
-## Data Processing 
+Data Processing
+---------------
 
 #### Solving the state abbreviations issue
 
 As mentioned above, we need to investigate why to we have 72 states instead of 50. Conveniently, the `datasets` package includes the full and abbreviated names of US states, which we can use to match with our dataset abbreviations. Let's take a closer look at the non-matching state abbreviations:
 
-
-```r
+``` r
 data(state)
 states <- cbind.data.frame(state.abb, state.name)
 
 setdiff(x = storm_data$STATE, y = states$state.abb)
 ```
 
-```
-##  [1] "DC" "PR" "ST" "AS" "GU" "MH" "VI" "AM" "LC" "PH" "GM" "PZ" "AN" "LH"
-## [15] "LM" "LE" "LS" "SL" "LO" "PM" "PK" "XX"
-```
+    ##  [1] "DC" "PR" "ST" "AS" "GU" "MH" "VI" "AM" "LC" "PH" "GM" "PZ" "AN" "LH"
+    ## [15] "LM" "LE" "LS" "SL" "LO" "PM" "PK" "XX"
 
-We can tell that some of those abbreviations are US District, Territories, water bodies and regions. We manually record those values and check if there are still any unmatches. 
+We can tell that some of those abbreviations are US District, Territories, water bodies and regions. We manually record those values and check if there are still any unmatches.
 
-
-```r
+``` r
 places <- c(DC = "District of Columbia", PR = "Puerto Rico", AS = "American Samoa", 
     GU = "Guam", MH = "Marshall Islands", VI = "Virgin Islands", LO = "Lake Ontario", 
     LE = "Lake Erie", LS = "Lake Superior", LM = "Lake Michigan", LH = "Lake Huron", 
@@ -240,34 +230,31 @@ states <- cbind.data.frame(state.abb, state.name)
 setdiff(states$state.abb, storm_data$STATE)
 ```
 
-```
-## character(0)
-```
+    ## character(0)
 
 All state (or places, should we say) abbreviations in our dataset now have a matching pair.
 
 #### Solving the too many event types issue
 
-There are 985 different values in the `EVTYPE` variable; there should only be 48. We have to, somehow, categorize the remaining 937 unique values as one of the official 48 weather event types. 
+There are 985 different values in the `EVTYPE` variable; there should only be 48. We have to, somehow, categorize the remaining 937 unique values as one of the official 48 weather event types.
 
-A lot of the surplus in event types is due to typos (human errors). Also, there are inconsistencies in data entry, which can be noticed by reading the [data codebook](./docs/storm_data_preparation.pdf) provided by the NOAA; e.g. coding an event as "Microdust", while, in the manual, is categorized as "Thunderstorm Winds". 
+A lot of the surplus in event types is due to typos (human errors). Also, there are inconsistencies in data entry, which can be noticed by reading the [data codebook](./docs/storm_data_preparation.pdf) provided by the NOAA; e.g. coding an event as "Microdust", while, in the manual, is categorized as "Thunderstorm Winds".
 
 We can solve many of these inconsistencies by matching them with the closest official `EVTYPE` string. We do this using the longest common substring method:
 
 "The longest common substring (method='lcs') is defined as the longest string that can be obtained by pairing characters from a and b while keeping the order of characters intact. The lcs-distance is defined as the number of unpaired characters. The distance is equivalent to the edit distance allowing only deletions and insertions, each with weight one."
 
-* van der Loo M (2014). “The stringdist package for approximate string matching.” _The R Journal_, *6*, pp. 111-122. <URL: https://CRAN.R-project.org/package=stringdist>.
+-   van der Loo M (2014). “The stringdist package for approximate string matching.” *The R Journal*, *6*, pp. 111-122. &lt;URL: <https://CRAN.R-project.org/package=stringdist>&gt;.
 
 In this case, given an official event type, we pair it with the closest element of `EVTYPE`. The drawback of this approach is that we got many "false positives" -- like "fog" being matched to "flood", instead of "dense fog".
 
-Given that there are many values in `EVTYPE` that are semantically close to the official event types, but not string-distance close, and the false positive matches, there was still a lot of manual work to do. 
+Given that there are many values in `EVTYPE` that are semantically close to the official event types, but not string-distance close, and the false positive matches, there was still a lot of manual work to do.
 
-The series of code chunks below has all the steps to arrive at the clean `EVTYPE` variable. 
+The series of code chunks below has all the steps to arrive at the clean `EVTYPE` variable.
 
-We need to define the target `EVTYPE` values, which are the 48 official event types defined by the NOAA: 
+We need to define the target `EVTYPE` values, which are the 48 official event types defined by the NOAA:
 
-
-```r
+``` r
 official_events <- c("Astronomical Low Tide", "Astronomical High Tide", "Avalanche", 
     "Blizzard", "Coastal Flood", "Cold/Wind Chill", "Dense Fog", "Dense Smoke", "Drought", 
     "Dust Devil", "Dust Storm", "Excessive Heat", "Extreme Cold/Wind Chill", "Flash Flood", 
@@ -279,19 +266,17 @@ official_events <- c("Astronomical Low Tide", "Astronomical High Tide", "Avalanc
     "Tsunami", "Volcanic Ash", "Waterspout", "Wildfire", "Winter Storm", "Winter Weather")
 ```
 
-We do some general manual susbstitutions to make all strings a bit more similar: everything lower case, delete non-alphanumeric characters, and "and" words.  
+We do some general manual susbstitutions to make all strings a bit more similar: everything lower case, delete non-alphanumeric characters, and "and" words.
 
-
-```r
+``` r
 storm_data <- storm_data %>% mutate(EVTYPE = tolower(EVTYPE), EVTYPE = gsub(pattern = "[^[:alpha:]]+", 
     replacement = " ", x = EVTYPE), EVTYPE = gsub(pattern = "and", replacement = " ", 
     x = EVTYPE, fixed = TRUE))
 ```
 
-After reading the [data codebook](./docs/storm_data_preparation.pdf), many semantical mismatches were evident: 
+After reading the [data codebook](./docs/storm_data_preparation.pdf), many semantical mismatches were evident:
 
-
-```r
+``` r
 ## Semantic substitutions, from the codebook tstm --> thunderstorm: very common,
 ## not close for string matching
 storm_data$EVTYPE <- gsub(pattern = "tstm", replacement = "thunderstorm", x = storm_data$EVTYPE)
@@ -372,10 +357,9 @@ storm_data$EVTYPE[grepl(pattern = paste(others, collapse = "|"), x = storm_data$
     ignore.case = TRUE)] <- "Other"
 ```
 
-We have a slightly more homogeneous `EVTYPE` variable that is close enough to the official name events. We use the longest common substring method to find how close are each of the values in `EVTYPE` to each of the `official_events`. 
+We have a slightly more homogeneous `EVTYPE` variable that is close enough to the official name events. We use the longest common substring method to find how close are each of the values in `EVTYPE` to each of the `official_events`.
 
-
-```r
+``` r
 ## Distance matrix of official_events by EVTYPE
 lcs_dist <- sapply(X = tolower(official_events), FUN = function(x) {
     stringdist(tolower(storm_data$EVTYPE), x, method = "lcs")
@@ -388,25 +372,16 @@ min_lcs <- apply(X = lcs_dist, MARGIN = 1, FUN = which.min)
 storm_data$EVTYPE <- official_events[min_lcs]
 ```
 
-
-
-
-## Results
+Results
+-------
 
 ### Most harmful meteorological events
 
 Across the United States, which types of events (as indicated in the `EVTYPE` variable) are most harmful with respect to population health?
 
-
-
-
 ### Most costly meteorological events
 
 Across the United States, which types of events have the greatest economic consequences?
 
-
-
-
-## References
-
-
+References
+----------

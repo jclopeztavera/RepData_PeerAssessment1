@@ -2,9 +2,7 @@
 title: "Finding the most severe storms in the US"
 author: "Juan C. López Tavera"
 date: "9/22/2017"
-output: 
-  html_document: 
-    keep_md: yes
+output: github_document
 ---
 
 ## Introduction
