@@ -2,6 +2,18 @@
 Juan C. López Tavera  
 9/22/2017  
 
+## Introduction
+
+This is a reproducible research report made with knitr for completing the requirements of the Reproducible Research Course by Johns Hopkins University at Coursera. 
+
+This documents describe the exploration of U.S. National Oceanic and Atmospheric Administration's (NOAA) storm database, which tracks weather phenomena, their characteristics and casualties caused by them. 
+
+The main objective of this data exploration is to answer the questions:
+
+1. Across the USA, which types of events are most harmful with respect to population health?
+2. Across the USA, which types of events have the greatest economic consequences?
+
+#### Project Setup
 
 
 ```r
@@ -41,16 +53,49 @@ knitr::opts_chunk$set(
 ```
 
 
-## Introduction
+#### Session Info
 
-This is a reproducible research report made with knitr for completing the requirements of the JHU's Reproducible Research Course. 
 
-This documents describe the exploration of U.S. National Oceanic and Atmospheric Administration's (NOAA) storm database, which tracks weather phenomena, their characteristics and casualties caused by them. 
+```r
+sessionInfo()
+```
 
-The main objective of this data exploration is to answer the questions:
-
-1. Across the USA, which types of events are most harmful with respect to population health?
-2. Across the USA, which types of events have the greatest economic consequences?
+```
+## R version 3.4.1 (2017-06-30)
+## Platform: x86_64-apple-darwin15.6.0 (64-bit)
+## Running under: macOS High Sierra 10.13
+## 
+## Matrix products: default
+## BLAS: /Library/Frameworks/R.framework/Versions/3.4/Resources/lib/libRblas.0.dylib
+## LAPACK: /Library/Frameworks/R.framework/Versions/3.4/Resources/lib/libRlapack.dylib
+## 
+## locale:
+## [1] en_US.UTF-8/en_US.UTF-8/en_US.UTF-8/C/en_US.UTF-8/en_US.UTF-8
+## 
+## attached base packages:
+## [1] stats     graphics  grDevices utils     datasets  methods   base     
+## 
+## other attached packages:
+##  [1] bindrcpp_0.2       stringdist_0.9.4.6 knitr_1.17        
+##  [4] dplyr_0.7.4        purrr_0.2.3        readr_1.1.1       
+##  [7] tidyr_0.7.1        tibble_1.3.4       ggplot2_2.2.1     
+## [10] tidyverse_1.1.1    R.utils_2.5.0      R.oo_1.21.0       
+## [13] R.methodsS3_1.7.1  data.table_1.10.4 
+## 
+## loaded via a namespace (and not attached):
+##  [1] Rcpp_0.12.13     formatR_1.5      cellranger_1.1.0 compiler_3.4.1  
+##  [5] plyr_1.8.4       bindr_0.1        forcats_0.2.0    tools_3.4.1     
+##  [9] digest_0.6.12    lubridate_1.6.0  jsonlite_1.5     evaluate_0.10.1 
+## [13] nlme_3.1-131     gtable_0.2.0     lattice_0.20-35  pkgconfig_2.0.1 
+## [17] rlang_0.1.2      psych_1.7.8      yaml_2.1.14      parallel_3.4.1  
+## [21] haven_1.1.0      xml2_1.1.1       httr_1.3.1       stringr_1.2.0   
+## [25] hms_0.3          rprojroot_1.2    grid_3.4.1       glue_1.1.1      
+## [29] R6_2.2.2         readxl_1.0.0     foreign_0.8-69   rmarkdown_1.6   
+## [33] modelr_0.1.1     reshape2_1.4.2   magrittr_1.5     scales_0.5.0    
+## [37] backports_1.1.1  htmltools_0.3.6  rvest_0.3.2      assertthat_0.2.0
+## [41] mnormt_1.5-5     colorspace_1.3-2 stringi_1.1.5    lazyeval_0.2.0  
+## [45] munsell_0.4.3    broom_0.4.2
+```
 
 
 ## Data reading
@@ -99,11 +144,11 @@ From the 37 variables in the data set, we're only focusing on:
 4. `BGN_DATE`: The reported date when each weather event was was first noticeable.
 5. `END_DATE`: The reported date when each weather event ceased. 
 6. `EVTYPE`: The classification of each weather event as one of the 48 types defined by the NOAA.
-7. `FATALITIES`: The number of direct and indirect human lives lost due to ach weather event. 
+7. `FATALITIES`: The number of direct and indirect human lives lost due to each weather event. 
 8. `INJURIES`: The number of reported injuries caused by each weather event.
 9. `PROPDMG`: The cost of property damage in USD (raw)
 10. `PROPDMGEXP`: The powers of 10 by which `PROPDMG` shall be multiplied to arrive at the final property damage cost in USD.
-11. `CROPDMG`: The cost of aggricultural losses/damage in USD (raw)
+11. `CROPDMG`: The cost of agricultural losses/damage in USD (raw)
 12. `CROPDMGEXP`: The powers of 10 by which `CROPDMG` shall be multiplied to arrive at the final property damage cost in USD.
 
 Now, we subset the NOAA data set: 
@@ -123,12 +168,14 @@ The classes of our NOAA storm database, `storm_data`, and the proportion of miss
 ## We make a tbl of column classes, the percentage of NAs; and display it
 classes <- sapply(storm_data, class) %>% as_data_frame() %>% rownames_to_column("Variable") %>% 
     select(Variable, Type = value)
-
+## Percentage of missing values, rounded to two decimals
 classes$`Percent of NAs` <- paste(sapply(storm_data, function(x) round(mean(is.na(x)) * 
     100, 2)), "%")
 
+## Number of unique values
 classes$`Unique Values` <- sapply(storm_data, function(x) length(unique(x)))
 
+## Print table with nice formatting
 kable(x = classes, align = c("l", "c", "r", "r"))
 ```
 
@@ -149,10 +196,198 @@ PROPDMGEXP    character           51.64 %              19
 CROPDMG        numeric                0 %             432
 CROPDMGEXP    character           68.54 %               9
 
-From the table, we can notice a couple of major oddities: 
+Looking at the table, we can notice a couple of major oddities: 
 
 1. The number of unique States in `STATE` is 72, while it should be 50.
 2. The number of different events `EVTYPE` is 985, while the NOAA has defined just 48.
+3. It is already known that `PROPDMG` and `CROPDMG` are not expressed as final USD amounts, but need to be multiplied by the factors `PROPDMG` and `PROPDMG` respectively. `PROPDMG` and `PROPDMG` should be of equal length though. 
+
+What causes such incongruities? How can we make our dataset more consistent with the phenomena it characterizes? These are questions that we shall answer in the Data Procesing section. 
+
+## Data Processing 
+
+#### Solving the state abbreviations issue
+
+As mentioned above, we need to investigate why to we have 72 states instead of 50. Conveniently, the `datasets` package includes the full and abbreviated names of US states, which we can use to match with our dataset abbreviations. Let's take a closer look at the non-matching state abbreviations:
+
+
+```r
+data(state)
+states <- cbind.data.frame(state.abb, state.name)
+
+setdiff(x = storm_data$STATE, y = states$state.abb)
+```
+
+```
+##  [1] "DC" "PR" "ST" "AS" "GU" "MH" "VI" "AM" "LC" "PH" "GM" "PZ" "AN" "LH"
+## [15] "LM" "LE" "LS" "SL" "LO" "PM" "PK" "XX"
+```
+
+We can tell that some of those abbreviations are US District, Territories, water bodies and regions. We manually record those values and check if there are still any unmatches. 
+
+
+```r
+places <- c(DC = "District of Columbia", PR = "Puerto Rico", AS = "American Samoa", 
+    GU = "Guam", MH = "Marshall Islands", VI = "Virgin Islands", LO = "Lake Ontario", 
+    LE = "Lake Erie", LS = "Lake Superior", LM = "Lake Michigan", LH = "Lake Huron", 
+    LS = "Lake St. Clair", AN = "Atlantic North", AM = "Atlantic South", GM = "Gulf of Mexico", 
+    PH = "Hawaii Waters", PZ = "Pacific East")
+
+state.abb <- c(state.abb, names(places))
+state.name <- c(state.name, places)
+states <- cbind.data.frame(state.abb, state.name)
+
+setdiff(states$state.abb, storm_data$STATE)
+```
+
+```
+## character(0)
+```
+
+All state (or places, should we say) abbreviations in our dataset now have a matching pair.
+
+#### Solving the too many event types issue
+
+There are 985 different values in the `EVTYPE` variable; there should only be 48. We have to, somehow, categorize the remaining 937 unique values as one of the official 48 weather event types. 
+
+A lot of the surplus in event types is due to typos (human errors). Also, there are inconsistencies in data entry, which can be noticed by reading the [data codebook](./docs/storm_data_preparation.pdf) provided by the NOAA; e.g. coding an event as "Microdust", while, in the manual, is categorized as "Thunderstorm Winds". 
+
+We can solve many of these inconsistencies by matching them with the closest official `EVTYPE` string. We do this using the longest common substring method:
+
+"The longest common substring (method='lcs') is defined as the longest string that can be obtained by pairing characters from a and b while keeping the order of characters intact. The lcs-distance is defined as the number of unpaired characters. The distance is equivalent to the edit distance allowing only deletions and insertions, each with weight one."
+
+* van der Loo M (2014). “The stringdist package for approximate string matching.” _The R Journal_, *6*, pp. 111-122. <URL: https://CRAN.R-project.org/package=stringdist>.
+
+In this case, given an official event type, we pair it with the closest element of `EVTYPE`. The drawback of this approach is that we got many "false positives" -- like "fog" being matched to "flood", instead of "dense fog".
+
+Given that there are many values in `EVTYPE` that are semantically close to the official event types, but not string-distance close, and the false positive matches, there was still a lot of manual work to do. 
+
+The series of code chunks below has all the steps to arrive at the clean `EVTYPE` variable. 
+
+We need to define the target `EVTYPE` values, which are the 48 official event types defined by the NOAA: 
+
+
+```r
+official_events <- c("Astronomical Low Tide", "Astronomical High Tide", "Avalanche", 
+    "Blizzard", "Coastal Flood", "Cold/Wind Chill", "Dense Fog", "Dense Smoke", "Drought", 
+    "Dust Devil", "Dust Storm", "Excessive Heat", "Extreme Cold/Wind Chill", "Flash Flood", 
+    "Flood", "Frost/Freeze", "Funnel Cloud", "Freezing Fog", "Hail", "Heat", "Heavy Rain", 
+    "Heavy Snow", "High Surf", "High Wind", "Hurricane (Typhoon)", "Ice Storm", "Lake-Effect Snow", 
+    "Lakeshore Flood", "Lightning", "Marine Hail", "Marine High Wind", "Marine Strong Wind", 
+    "Marine Thunderstorm Wind", "Other", "Rip Current", "Seiche", "Sleet", "Storm Surge/Tide", 
+    "Strong Wind", "Thunderstorm Wind", "Tornado", "Tropical Depression", "Tropical Storm", 
+    "Tsunami", "Volcanic Ash", "Waterspout", "Wildfire", "Winter Storm", "Winter Weather")
+```
+
+We do some general manual susbstitutions to make all strings a bit more similar: everything lower case, delete non-alphanumeric characters, and "and" words.  
+
+
+```r
+storm_data <- storm_data %>% mutate(EVTYPE = tolower(EVTYPE), EVTYPE = gsub(pattern = "[^[:alpha:]]+", 
+    replacement = " ", x = EVTYPE), EVTYPE = gsub(pattern = "and", replacement = " ", 
+    x = EVTYPE, fixed = TRUE))
+```
+
+After reading the [data codebook](./docs/storm_data_preparation.pdf), many semantical mismatches were evident: 
+
+
+```r
+## Semantic substitutions, from the codebook tstm --> thunderstorm: very common,
+## not close for string matching
+storm_data$EVTYPE <- gsub(pattern = "tstm", replacement = "thunderstorm", x = storm_data$EVTYPE)
+
+### Floods homologation of 'flood' variants, including urban and rural floods
+storm_data$EVTYPE[grepl(pattern = "fld|urban\\/sml stream fld|urban\\/small stream flooding|stream flood", 
+    x = storm_data$EVTYPE)] <- "Flood"
+
+### Homologation of 'wind' to strong wind
+storm_data$EVTYPE <- gsub(pattern = "winds|wnd", replacement = "strong wind", x = storm_data$EVTYPE)
+
+## Homologation of frost/freeze variants
+storm_data$EVTYPE[grepl(pattern = "frost|freeze|freezing|frost|icy roads", x = storm_data$EVTYPE, 
+    ignore.case = TRUE)] <- "Frost/Freeze"
+
+### cold weather --> winter weather
+storm_data$EVTYPE[grepl(pattern = "cold weather", x = storm_data$EVTYPE, ignore.case = TRUE)] <- "Winter Weather"
+
+## Homologation of extreme cold wind chill
+storm_data$EVTYPE[grepl(pattern = "cold|chill|record low|cool|low temperature|Hypothermia", 
+    x = storm_data$EVTYPE, ignore.case = TRUE)] <- "Extreme Cold/Wind Chill"
+
+## Homologation of hurricane (typhoon)
+storm_data$EVTYPE[grepl(pattern = "hurricane|typhoon", x = storm_data$EVTYPE, ignore.case = TRUE)] <- "Hurricane (Typhoon)"
+
+## Semantic homologation of light snow --> sleet
+storm_data$EVTYPE[grepl(pattern = "ligth snow", x = storm_data$EVTYPE, ignore.case = TRUE)] <- "sleet"
+
+## Snow occurrences to heavy snow
+storm_data$EVTYPE[grepl(pattern = "snow", x = storm_data$EVTYPE, ignore.case = TRUE)] <- "Heavy Snow"
+
+## Semantic homologation of ~burst to thunderstorm winds
+storm_data$EVTYPE[grepl(pattern = "dry microburst|downburst|burst", x = storm_data$EVTYPE, 
+    ignore.case = TRUE)] <- "thunderstorm wind"
+
+## Semantic homologation of hail
+storm_data$EVTYPE[grepl(pattern = "wintry mix|glaze|hail", x = storm_data$EVTYPE, 
+    ignore.case = TRUE)] <- "hail"
+
+## Drought semantic homologation
+storm_data$EVTYPE[grepl(pattern = "dry|low rainfall", x = storm_data$EVTYPE, ignore.case = TRUE)] <- "Drought"
+
+## Excessive heat
+storm_data$EVTYPE[grepl(pattern = "record heat|warm|hot|warmth|high temperature record", 
+    x = storm_data$EVTYPE, ignore.case = TRUE)] <- "Excessive Heat"
+
+## After cleaning drought, substituting synonyms of heavy rain
+storm_data$EVTYPE[grepl(pattern = "precipitation|rainfall|rain", x = storm_data$EVTYPE, 
+    ignore.case = TRUE)] <- "Heavy Rain"
+
+## all surf occurrences to high surf
+storm_data$EVTYPE[grepl(pattern = "surf", x = storm_data$EVTYPE, ignore.case = TRUE)] <- "High Surf"
+
+# Ice storm
+storm_data$EVTYPE[grepl(pattern = "black ice|ice", x = storm_data$EVTYPE, ignore.case = TRUE)] <- "ice storm"
+
+## blowing dust to dust storm
+storm_data$EVTYPE[grepl(pattern = "blowing dust", x = storm_data$EVTYPE, ignore.case = TRUE)] <- "dust storm"
+
+## coastal storm to marine thunderstorm
+storm_data$EVTYPE[grepl(pattern = "coastal storm|beach", x = storm_data$EVTYPE, ignore.case = TRUE)] <- "marine thunderstorm"
+
+## all funnels to funnel cloud
+storm_data$EVTYPE[grepl(pattern = "funnel", x = storm_data$EVTYPE, ignore.case = TRUE)] <- "funnel cloud"
+
+## flood consequences to flash flood (from codebook)
+storm_data$EVTYPE[grepl(pattern = "river|slide|dam|ice floes", x = storm_data$EVTYPE, 
+    ignore.case = TRUE)] <- "Flash Flood"
+
+## Manual matching of fog to dense fog
+storm_data$EVTYPE[grepl(pattern = "fog", x = storm_data$EVTYPE, ignore.case = TRUE)] <- "Dense Fog"
+
+## there were some ambiguous records, that had to be matched to 'Other'
+others <- c("apache county", "none", "summary", "unseasonably wet", "monthly temperature", 
+    "record temperature", "red flag", "temperature record")
+
+storm_data$EVTYPE[grepl(pattern = paste(others, collapse = "|"), x = storm_data$EVTYPE, 
+    ignore.case = TRUE)] <- "Other"
+```
+
+We have a slightly more homogeneous `EVTYPE` variable that is close enough to the official name events. We use the longest common substring method to find how close are each of the values in `EVTYPE` to each of the `official_events`. 
+
+
+```r
+## Distance matrix of official_events by EVTYPE
+lcs_dist <- sapply(X = tolower(official_events), FUN = function(x) {
+    stringdist(tolower(storm_data$EVTYPE), x, method = "lcs")
+})
+## Selecting the minimum distance from official_events to EVTYPE ie, the
+## official_event type match to the raw EVTYPE
+min_lcs <- apply(X = lcs_dist, MARGIN = 1, FUN = which.min)
+
+## Substitutting EVTYPE with the matching official_events
+storm_data$EVTYPE <- official_events[min_lcs]
+```
+
 
 
 
@@ -172,6 +407,6 @@ Across the United States, which types of events have the greatest economic conse
 
 
 
-
+## References
 
 

@@ -238,7 +238,7 @@ All state (or places, should we say) abbreviations in our dataset now have a mat
 
 There are 985 different values in the `EVTYPE` variable; there should only be 48. We have to, somehow, categorize the remaining 937 unique values as one of the official 48 weather event types. 
 
-A lot of the surplus in event types is due to typos (human errors). Also, there are inconsistencies in data entry, which can be noticed by reading the data documentation provided by the NOAA; e.g. coding an event as "Microdust", while, in the manual, is categorized as "Thunderstorm Winds". 
+A lot of the surplus in event types is due to typos (human errors). Also, there are inconsistencies in data entry, which can be noticed by reading the [data codebook](./docs/storm_data_preparation.pdf) provided by the NOAA; e.g. coding an event as "Microdust", while, in the manual, is categorized as "Thunderstorm Winds". 
 
 We can solve many of these inconsistencies by matching them with the closest official `EVTYPE` string. We do this using the longest common substring method:
 
@@ -249,6 +249,240 @@ We can solve many of these inconsistencies by matching them with the closest off
 In this case, given an official event type, we pair it with the closest element of `EVTYPE`. The drawback of this approach is that we got many "false positives" -- like "fog" being matched to "flood", instead of "dense fog".
 
 Given that there are many values in `EVTYPE` that are semantically close to the official event types, but not string-distance close, and the false positive matches, there was still a lot of manual work to do. 
+
+The series of code chunks below has all the steps to arrive at the clean `EVTYPE` variable. 
+
+We need to define the target `EVTYPE` values, which are the 48 official event types defined by the NOAA: 
+
+```{r evtype cleaning}
+
+official_events <- c(
+  "Astronomical Low Tide",
+  "Astronomical High Tide",
+  "Avalanche",
+  "Blizzard",
+  "Coastal Flood",
+  "Cold/Wind Chill",
+  "Dense Fog",
+  "Dense Smoke",
+  "Drought",
+  "Dust Devil",
+  "Dust Storm",
+  "Excessive Heat",
+  "Extreme Cold/Wind Chill",
+  "Flash Flood",
+  "Flood",
+  "Frost/Freeze",
+  "Funnel Cloud",
+  "Freezing Fog",
+  "Hail",
+  "Heat",
+  "Heavy Rain",
+  "Heavy Snow",
+  "High Surf",
+  "High Wind",
+  "Hurricane (Typhoon)",
+  "Ice Storm",
+  "Lake-Effect Snow",
+  "Lakeshore Flood",
+  "Lightning",
+  "Marine Hail",
+  "Marine High Wind",
+  "Marine Strong Wind",
+  "Marine Thunderstorm Wind",
+  "Other",
+  "Rip Current",
+  "Seiche",
+  "Sleet",
+  "Storm Surge/Tide",
+  "Strong Wind",
+  "Thunderstorm Wind",
+  "Tornado",
+  "Tropical Depression",
+  "Tropical Storm",
+  "Tsunami",
+  "Volcanic Ash",
+  "Waterspout",
+  "Wildfire",
+  "Winter Storm",
+  "Winter Weather"
+)
+
+```
+
+We do some general manual susbstitutions to make all strings a bit more similar: everything lower case, delete non-alphanumeric characters, and "and" words.  
+
+```{r general edits}
+
+storm_data <- storm_data %>% mutate(
+  EVTYPE = tolower(EVTYPE),
+  EVTYPE = gsub(
+    pattern = "[^[:alpha:]]+",
+    replacement = " ",
+    x = EVTYPE
+  ),
+  EVTYPE = gsub(
+    pattern = "and",
+    replacement = " ",
+    x = EVTYPE,
+    fixed = TRUE
+  )
+)
+
+```
+
+After reading the [data codebook](./docs/storm_data_preparation.pdf), many semantical mismatches were evident: 
+
+```{r manual-substitutions, cache=TRUE}
+
+## Semantic substitutions, from the codebook
+### tstm --> thunderstorm: very common, not close for string matching
+storm_data$EVTYPE <- gsub(pattern = "tstm",
+                          replacement = "thunderstorm",
+                          x = storm_data$EVTYPE)
+
+### Floods homologation of "flood" variants, including urban and rural floods
+storm_data$EVTYPE[grepl(pattern = "fld|urban\\/sml stream fld|urban\\/small stream flooding|stream flood", x = storm_data$EVTYPE)]  <-
+  "Flood"
+
+### Homologation of "wind" to strong wind
+storm_data$EVTYPE <- gsub(pattern = "winds|wnd",
+                          replacement = "strong wind",
+                          x = storm_data$EVTYPE)
+
+## Homologation of frost/freeze variants
+storm_data$EVTYPE[grepl(pattern = "frost|freeze|freezing|frost|icy roads",
+                        x = storm_data$EVTYPE,
+                        ignore.case = TRUE)] <- "Frost/Freeze"
+
+### cold weather --> winter weather
+storm_data$EVTYPE[grepl(pattern = "cold weather",
+                        x = storm_data$EVTYPE,
+                        ignore.case = TRUE)] <- "Winter Weather"
+
+## Homologation of extreme cold wind chill
+storm_data$EVTYPE[grepl(pattern = "cold|chill|record low|cool|low temperature|Hypothermia",
+                        x = storm_data$EVTYPE,
+                        ignore.case = TRUE)] <-
+  "Extreme Cold/Wind Chill"
+
+## Homologation of hurricane (typhoon)
+storm_data$EVTYPE[grepl(pattern = "hurricane|typhoon",
+                        x = storm_data$EVTYPE,
+                        ignore.case = TRUE)] <-
+  "Hurricane (Typhoon)"
+
+## Semantic homologation of light snow --> sleet
+storm_data$EVTYPE[grepl(pattern = "ligth snow",
+                        x = storm_data$EVTYPE,
+                        ignore.case = TRUE)] <- "sleet"
+
+## Snow occurrences to heavy snow
+storm_data$EVTYPE[grepl(pattern = "snow",
+                        x = storm_data$EVTYPE,
+                        ignore.case = TRUE)] <- "Heavy Snow"
+
+## Semantic homologation of ~burst to thunderstorm winds
+storm_data$EVTYPE[grepl(pattern = "dry microburst|downburst|burst",
+                        x = storm_data$EVTYPE,
+                        ignore.case = TRUE)] <-
+  "thunderstorm wind"
+
+## Semantic homologation of hail
+storm_data$EVTYPE[grepl(pattern = "wintry mix|glaze|hail",
+                        x = storm_data$EVTYPE,
+                        ignore.case = TRUE)] <- "hail"
+
+## Drought semantic homologation
+storm_data$EVTYPE[grepl(pattern = "dry|low rainfall",
+                        x = storm_data$EVTYPE,
+                        ignore.case = TRUE)] <- "Drought"
+
+## Excessive heat
+storm_data$EVTYPE[grepl(pattern = "record heat|warm|hot|warmth|high temperature record",
+                        x = storm_data$EVTYPE,
+                        ignore.case = TRUE)] <- "Excessive Heat"
+
+## After cleaning drought, substituting synonyms of heavy rain
+storm_data$EVTYPE[grepl(pattern = "precipitation|rainfall|rain",
+                        x = storm_data$EVTYPE,
+                        ignore.case = TRUE)] <- "Heavy Rain"
+
+## all surf occurrences to high surf
+storm_data$EVTYPE[grepl(pattern = "surf",
+                        x = storm_data$EVTYPE,
+                        ignore.case = TRUE)] <- "High Surf"
+
+# Ice storm
+storm_data$EVTYPE[grepl(pattern = "black ice|ice",
+                        x = storm_data$EVTYPE,
+                        ignore.case = TRUE)] <- "ice storm"
+
+## blowing dust to dust storm
+storm_data$EVTYPE[grepl(pattern = "blowing dust",
+                        x = storm_data$EVTYPE,
+                        ignore.case = TRUE)] <- "dust storm"
+
+## coastal storm to marine thunderstorm
+storm_data$EVTYPE[grepl(pattern = "coastal storm|beach",
+                        x = storm_data$EVTYPE,
+                        ignore.case = TRUE)] <-
+  "marine thunderstorm"
+
+## all funnels to funnel cloud
+storm_data$EVTYPE[grepl(pattern = "funnel",
+                        x = storm_data$EVTYPE,
+                        ignore.case = TRUE)] <- "funnel cloud"
+
+## flood consequences to flash flood (from codebook)
+storm_data$EVTYPE[grepl(pattern = "river|slide|dam|ice floes",
+                        x = storm_data$EVTYPE,
+                        ignore.case = TRUE)] <- "Flash Flood"
+
+## Manual matching of fog to dense fog
+storm_data$EVTYPE[grepl(pattern = "fog",
+                        x = storm_data$EVTYPE,
+                        ignore.case = TRUE)] <- "Dense Fog"
+
+## there were some ambiguous records, that had to be matched to "Other"
+others <- c(
+  "apache county",
+  "none",
+  "summary",
+  "unseasonably wet",
+  "monthly temperature",
+  "record temperature",
+  "red flag",
+  "temperature record"
+)
+
+storm_data$EVTYPE[grepl(
+  pattern = paste(others, collapse = "|"),
+  x = storm_data$EVTYPE,
+  ignore.case = TRUE
+)] <- "Other"
+
+```
+
+We have a slightly more homogeneous `EVTYPE` variable that is close enough to the official name events. We use the longest common substring method to find how close are each of the values in `EVTYPE` to each of the `official_events`. 
+
+```{r longest-common-substring, cache=TRUE}
+
+## Distance matrix of official_events by EVTYPE
+lcs_dist <- sapply(
+  X = tolower(official_events),
+  FUN = function(x) {
+    stringdist(tolower(storm_data$EVTYPE), x, method = "lcs")
+  }
+)
+## Selecting the minimum distance from official_events to EVTYPE
+## ie, the official_event type match to the raw EVTYPE
+min_lcs <- apply(X = lcs_dist, MARGIN = 1, FUN = which.min)
+
+## Substitutting EVTYPE with the matching official_events
+storm_data$EVTYPE <- official_events[min_lcs]
+
+```
 
 
 
