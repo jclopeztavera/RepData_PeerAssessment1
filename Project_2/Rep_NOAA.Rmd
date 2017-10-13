@@ -483,6 +483,65 @@ storm_data$EVTYPE <- official_events[min_lcs]
 ```
 
 
+#### Estimating the human casualties
+
+Sadly, these weather events cause human deaths and injuries; these numbers are recorded by the NOAA, and will be added to fulfill the definition of "harmful to human health" specified in this document. 
+
+```{r}
+storm_data$human_damage <- storm_data$INJURIES + storm_data$FATALITIES
+```
+
+
+
+
+#### Calculating the and economic damage to crops and properties
+
+The numbers of human causalties and economic damages are not expressed in their final form; they're rather expressed as coefficients of 10 raised to some power of ten.
+
+`PROPDMG` needs to be multiplied by `PROPDMGEXP` elevated to some power of ten; the same for `CROPDMG * (CROPDMGEXP ^ n)`. 
+
+`PROPDMGEXP` and `CROPDMGEXP` are not explicitly defined as powers of then but rather as some sort abbreviated metrix prefixes: "k" (kilo), "m" (mega or millions), "b" (billions). 
+
+```{r, message=FALSE}
+## we have unequal lengths of EXP variables, we unify them by transforming them to lowercase
+storm_data$PROPDMGEXP <- tolower(storm_data$PROPDMGEXP)
+storm_data$CROPDMGEXP <- tolower(storm_data$CROPDMGEXP)
+
+## defining their unique values 
+propdmg_exp_raw <- storm_data$PROPDMGEXP %>% unique
+cropdmg_exp_raw <- storm_data$CROPDMGEXP %>% unique
+
+## Merge both variables, get the unique values and sort them alphabetically
+dmg_exp_raw <-
+  c(propdmg_exp_raw, cropdmg_exp_raw) %>% unique %>% sort
+
+## Deleting non-alphanumeric characters; +.,-,? are ommited
+dmg_exp_raw <-
+  dmg_exp_raw[grepl(pattern = "[[:alnum:]]", x = dmg_exp_raw)]
+
+## Abbreviation for each power, explained
+b <- 9
+h <- 2
+k <- 3
+m <- 6
+
+## Scientific notation
+dmg_exp_str <- paste("10^", dmg_exp_raw, sep = "")
+dmg_exp <- sapply(parse(text = dmg_exp_str), eval)
+
+## tables with computable powers of ten to join to the storm dataset
+prop_dmg_exp_table <-
+  dplyr::data_frame(PROPDMGEXP = dmg_exp_raw, prop_dmg_exp = dmg_exp)
+crop_dmg_exp_table <-
+  dplyr::data_frame(CROPDMGEXP = dmg_exp_raw, crop_dmg_exp = dmg_exp)
+
+storm_data <- storm_data %>%
+  right_join(x = prop_dmg_exp_table) %>%
+  right_join(x = crop_dmg_exp_table)
+
+```
+
+
 
 
 ## Results
