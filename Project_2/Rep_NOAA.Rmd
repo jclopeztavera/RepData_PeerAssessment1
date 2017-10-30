@@ -229,6 +229,8 @@ states <- cbind.data.frame(state.abb, state.name)
 
 setdiff(states$state.abb, storm_data$STATE)
 
+state.abb
+
 ```
 
 All state (or places, should we say) abbreviations in our dataset now have a matching pair.
@@ -479,7 +481,9 @@ lcs_dist <- sapply(
 min_lcs <- apply(X = lcs_dist, MARGIN = 1, FUN = which.min)
 
 ## Substitutting EVTYPE with the matching official_events
-storm_data$EVTYPE <- official_events[min_lcs]
+storm_data$event_type <- official_events[min_lcs]
+
+storm_data <- storm_data %>% select(-EVTYPE)
 
 ```
 
@@ -490,6 +494,8 @@ Sadly, these weather events cause human deaths and injuries; these numbers are r
 
 ```{r}
 storm_data$human_damage <- storm_data$INJURIES + storm_data$FATALITIES
+
+storm_data <- storm_data %>% select(-c(INJURIES, FATALITIES))
 ```
 
 
@@ -538,9 +544,28 @@ storm_data <- storm_data %>%
   right_join(x = prop_dmg_exp_table) %>%
   right_join(x = crop_dmg_exp_table)
 
+storm_data <- storm_data %>%
+  mutate(
+  property_damage = ifelse(is.na(prop_dmg_exp), 
+                           PROPDMG, 
+                           PROPDMG * prop_dmg_exp),
+  crop_damage = ifelse(is.na(crop_dmg_exp), 
+                       CROPDMG, 
+                       CROPDMG * crop_dmg_exp)
+  ) %>% 
+  select(-c(contains(match = "dmg", ignore.case = TRUE)))
+
 ```
 
-
+#### Usable dates 
+```{r}
+storm_data <- storm_data %>% mutate(
+  BGN_DATE = parse_datetime(x = BGN_DATE, format = "%m/%d/%Y %H:%M:%S"),
+  END_DATE = parse_datetime(x = END_DATE, format = "%m/%d/%Y %H:%M:%S")
+  ) %>% 
+  mutate(year = ifelse((is.na(END_DATE) | year(BGN_DATE) >= year(END_DATE)), year(BGN_DATE), year(END_DATE))) %>% 
+  select(-c(BGN_DATE, END_DATE))
+```
 
 
 ## Results
