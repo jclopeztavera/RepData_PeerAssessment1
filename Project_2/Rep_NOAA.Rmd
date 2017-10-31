@@ -115,16 +115,13 @@ From the `r ncol(storm_data)` variables in the data set, we're only focusing on:
 
 1. `REFNUM`: The reference number assigned to each weather event.
 2. `STATE`: The state name abbreviation where each weather event occurred. 
-3. `COUNTYNAME`: The county where each weather event occurred. 
-4. `BGN_DATE`: The reported date when each weather event was was first noticeable.
-5. `END_DATE`: The reported date when each weather event ceased. 
-6. `EVTYPE`: The classification of each weather event as one of the 48 types defined by the NOAA.
-7. `FATALITIES`: The number of direct and indirect human lives lost due to each weather event. 
-8. `INJURIES`: The number of reported injuries caused by each weather event.
-9. `PROPDMG`: The cost of property damage in USD (raw)
-10. `PROPDMGEXP`: The powers of 10 by which `PROPDMG` shall be multiplied to arrive at the final property damage cost in USD.
-11. `CROPDMG`: The cost of agricultural losses/damage in USD (raw)
-12. `CROPDMGEXP`: The powers of 10 by which `CROPDMG` shall be multiplied to arrive at the final property damage cost in USD.
+3. `BGN_DATE`: The reported date when each weather event was was first noticeable.
+4. `END_DATE`: The reported date when each weather event ceased. 
+5. `EVTYPE`: The classification of each weather event as one of the 48 types defined by the NOAA.
+6. `FATALITIES`: The number of direct and indirect human lives lost due to each weather event. 
+7. `INJURIES`: The number of reported injuries caused by each weather event.
+8. `PROPDMG`: The cost of property damage in USD (raw)
+9. `CROPDMG`: The cost of agricultural losses/damage in USD (raw)
 
 Now, we subset the NOAA data set: 
 
@@ -132,9 +129,8 @@ Now, we subset the NOAA data set:
 
 storm_data <- storm_data %>%
   select(
-  REFNUM,
+  event_id = REFNUM,
   STATE,
-  COUNTYNAME,
   BGN_DATE,
   END_DATE,
   EVTYPE,
@@ -175,19 +171,19 @@ kable(x = classes, align = c("l", "c", "r", "r"))
 
 ### Data cleaning tasks 
 
-Looking at the dataset, we can notice a couple of major oddities, which should be solved by cleaning the dataset: 
+Looking at the data set, we can notice a couple of major oddities, which should be solved by cleaning the data set: 
 
 1. The number of unique States in `STATE` is 72, while it should be 50.
 2. The number of different events `EVTYPE` is 985, while the NOAA has defined just 48.
 3. It is already known that `PROPDMG` and `CROPDMG` are not expressed as final USD amounts, but need to be multiplied by the factors `PROPDMG` and `PROPDMG` respectively. `PROPDMG` and `PROPDMG` should be of equal length though. 
 
-What causes such incongruities? How can we make our dataset more consistent with the phenomena it characterizes? These are questions that we shall answer in the Data Procesing section. 
+What causes such incongruities? How can we make our data set more consistent with the phenomena it characterizes? These are questions that we shall answer in the Data Processing section. 
 
 ### Data Processing 
 
 #### Solving the state abbreviations issue
 
-As mentioned above, we need to investigate why to we have 72 states instead of 50. Conveniently, the `datasets` package includes the full and abbreviated names of US states, which we can use to match with our dataset abbreviations. Let's take a closer look at the non-matching state abbreviations:
+As mentioned above, we need to investigate why to we have 72 states instead of 50. Conveniently, the `datasets` package includes the full and abbreviated names of US states, which we can use to match with our data set abbreviations. Let's take a closer look at the non-matching state abbreviations:
 
 ```{r state names and abbreviations}
 
@@ -198,7 +194,7 @@ setdiff(x = storm_data$STATE, y = states$state.abb)
 
 ```
 
-We can tell that some of those abbreviations are US District, Territories, water bodies and regions. We manually record those values and check if there are still any unmatches. 
+We can tell that some of those abbreviations are US District, Territories, water bodies and regions. We manually record those values and check if there are still any unmatched. 
 
 ```{r}
 
@@ -223,17 +219,19 @@ places <-
   PZ = "Pacific East"
   )
 
-state.abb <- c(state.abb, names(places))
-state.name <- c(state.name, places)
-states <- cbind.data.frame(state.abb, state.name)
+state_abb <- c(state.abb, names(places))
+state_name <- c(state.name, places)
+states <- cbind.data.frame(STATE = state.abb, state = state.name)
 
-setdiff(states$state.abb, storm_data$STATE)
+setdiff(states$STATE, storm_data$STATE)
 
-state.abb
+storm_data <- left_join(x = storm_data, states, by = "STATE")
+
+storm_data <- storm_data %>% select(-STATE)
 
 ```
 
-All state (or places, should we say) abbreviations in our dataset now have a matching pair.
+All state (or places, should we say) abbreviations in our data set now have a matching pair.
 
 #### Solving the too many event types issue
 
@@ -311,7 +309,7 @@ official_events <- c(
 
 ```
 
-We do some general manual susbstitutions to make all strings a bit more similar: everything lower case, delete non-alphanumeric characters, and "and" words.  
+We do some general manual substitutions to make all strings a bit more similar: everything lower case, delete non-alphanumeric characters, and "and" words.  
 
 ```{r general edits}
 
@@ -332,7 +330,7 @@ storm_data <- storm_data %>% mutate(
 
 ```
 
-After reading the [data codebook](./docs/storm_data_preparation.pdf), many semantical mismatches were evident: 
+After reading the [data codebook](./docs/storm_data_preparation.pdf), many semantic mismatches were evident: 
 
 ```{r manual-substitutions, cache=TRUE}
 
@@ -493,21 +491,24 @@ storm_data <- storm_data %>% select(-EVTYPE)
 Sadly, these weather events cause human deaths and injuries; these numbers are recorded by the NOAA, and will be added to fulfill the definition of "harmful to human health" specified in this document. 
 
 ```{r}
+
 storm_data$human_damage <- storm_data$INJURIES + storm_data$FATALITIES
 
 storm_data <- storm_data %>% select(-c(INJURIES, FATALITIES))
+
 ```
 
 
 #### Calculating the and economic damage to crops and properties
 
-The numbers of human causalties and economic damages are not expressed in their final form; they're rather expressed as coefficients of 10 raised to some power of ten.
+The numbers of human causalities and economic damages are not expressed in their final form; they're rather expressed as coefficients of 10 raised to some power of ten.
 
 `PROPDMG` needs to be multiplied by `PROPDMGEXP` elevated to some power of ten; the same for `CROPDMG * (CROPDMGEXP ^ n)`. 
 
-`PROPDMGEXP` and `CROPDMGEXP` are not explicitly defined as powers of then but rather as some sort abbreviated metrix prefixes: "k" (kilo), "m" (mega or millions), "b" (billions). 
+`PROPDMGEXP` and `CROPDMGEXP` are not explicitly defined as powers of then but rather as some sort abbreviated metric prefixes: "k" (kilo), "m" (mega or millions), "b" (billions). 
 
 ```{r, message=FALSE}
+
 ## we have unequal lengths of EXP variables, we unify them by transforming them to lowercase
 storm_data$PROPDMGEXP <- tolower(storm_data$PROPDMGEXP)
 storm_data$CROPDMGEXP <- tolower(storm_data$CROPDMGEXP)
@@ -553,7 +554,8 @@ storm_data <- storm_data %>%
                        CROPDMG, 
                        CROPDMG * crop_dmg_exp)
   ) %>% 
-  select(-c(contains(match = "dmg", ignore.case = TRUE)))
+  mutate(damages_cost = property_damage + crop_damage) %>%
+  select(-c(contains(match = "dmg", ignore.case = TRUE)), -c(property_damage, crop_damage))
 
 ```
 
@@ -567,6 +569,32 @@ storm_data <- storm_data %>% mutate(
   select(-c(BGN_DATE, END_DATE))
 ```
 
+### Subsetting information-rich years
+Not all years the NOAA used to record a wide variety of weather events: before 1993, it only recorded 3 different types of events, which inflates the count of reported events (for Tornado, Thunderstorm Wind and Hail), subsequently biasing the estimates of human and economic damages. 
+
+```{r}
+
+storm_data <- storm_data %>% filter(year >= 1993)
+
+```
+
+### Ommiting punctual odd reported damage cost observations
+There's one damages cost observation which is oddly high: a flood in 2006 in California with an associated damages cost of 115032500000 USD; to put this figure in context, the following reported damages cost was 31300000000 USD, associated to a Storm Surge/Tide in 2005 in Louisiana. It is likely a typo, which we ommit. 
+
+Also, there are a couple of suspiciously similar hurricanes (typhoons) in 2005 in Mississippi, both with associated costs of ~7400000000 USD, the difference is that one doesn't have reported human damages. It is likely a repeated observation, which we delete.
+
+```{r delete odd obs, message=FALSE}
+
+## typo in damages cost
+storm_data[storm_data$event_id == 605943,]$damages_cost <- NA
+
+## repeated observation
+storm_data <- storm_data[storm_data$event_id != 581533,] 
+
+```
+
+#### Adjusting damages costs in USD for inflation
+TODO
 
 ## Results
 
