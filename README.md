@@ -11,3 +11,5 @@ There are two projects in this repository:
 1. [Course Project 1.](https://github.com/jclopeztavera/Reproducible-Research/tree/master/Project_1) Analyzing Data from Personal Activity Monitors
 
 2. [Course Project2. ](https://github.com/jclopeztavera/Reproducible-Research/tree/master/Project_2) Exploring the National Oceanic and Atmospheric Administration's (NOAA) storm database
+
+Each of the project folders is, of course, reproducible; this means that they are self-contained: all code + data (or link to data) necessary to produce the reports.
