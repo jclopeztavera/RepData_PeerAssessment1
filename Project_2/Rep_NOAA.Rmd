@@ -1,8 +1,8 @@
 ---
-title: "Finding the most severe storms in the US"
+title: "Finding the Most Severe Weather Events in the US"
 author: "Juan C. López Tavera"
-date: "9/22/2017"
-output: github_document
+date: "11/8/2017"
+output: html_document
 ---
 #### Project Setup
 
@@ -38,7 +38,7 @@ knitr::opts_chunk$set(
     fig.align = "center",
     fig.path = "figure/",
     highlight = TRUE, 
-    cache = TRUE
+    cache = FALSE
 )
 
 ```
@@ -162,8 +162,12 @@ classes$`Percent of NAs` <- paste(sapply(storm_data, function(x)
 ## Number of unique values
 classes$`Unique Values` <- sapply(storm_data, function(x)length(unique(x)))
 
+
+
 ## Print table with nice formatting
-kable(x = classes, align = c("l", "c", "r", "r"))
+classes %>% 
+  arrange(desc(`Unique Values`), desc(`Percent of NAs`)) %>%
+  kable(x = ., align = c("l", "c", "r", "r"))
 
 ```
 
@@ -196,7 +200,7 @@ setdiff(x = storm_data$STATE, y = states$state.abb)
 
 We can tell that some of those abbreviations are US District, Territories, water bodies and regions. We manually record those values and check if there are still any unmatched. 
 
-```{r}
+```{r defininc places, message=FALSE}
 
 places <-
   c(
@@ -490,7 +494,7 @@ storm_data <- storm_data %>% select(-EVTYPE)
 
 Sadly, these weather events cause human deaths and injuries; these numbers are recorded by the NOAA, and will be added to fulfill the definition of "harmful to human health" specified in this document. 
 
-```{r}
+```{r calculating human damages}
 
 storm_data$human_damage <- storm_data$INJURIES + storm_data$FATALITIES
 
@@ -507,7 +511,7 @@ The numbers of human causalities and economic damages are not expressed in their
 
 `PROPDMGEXP` and `CROPDMGEXP` are not explicitly defined as powers of then but rather as some sort abbreviated metric prefixes: "k" (kilo), "m" (mega or millions), "b" (billions). 
 
-```{r, message=FALSE}
+```{r damages and costs, message=FALSE}
 
 ## we have unequal lengths of EXP variables, we unify them by transforming them to lowercase
 storm_data$PROPDMGEXP <- tolower(storm_data$PROPDMGEXP)
@@ -560,33 +564,35 @@ storm_data <- storm_data %>%
 ```
 
 #### Usable dates 
-```{r}
+```{r usable dates}
+
 storm_data <- storm_data %>% mutate(
   BGN_DATE = parse_datetime(x = BGN_DATE, format = "%m/%d/%Y %H:%M:%S"),
   END_DATE = parse_datetime(x = END_DATE, format = "%m/%d/%Y %H:%M:%S")
   ) %>% 
   mutate(year = ifelse((is.na(END_DATE) | year(BGN_DATE) >= year(END_DATE)), year(BGN_DATE), year(END_DATE))) %>% 
   select(-c(BGN_DATE, END_DATE))
+
 ```
 
 ### Subsetting information-rich years
 Not all years the NOAA used to record a wide variety of weather events: before 1993, it only recorded 3 different types of events, which inflates the count of reported events (for Tornado, Thunderstorm Wind and Hail), subsequently biasing the estimates of human and economic damages. 
 
-```{r}
+```{r filter years, warning=FALSE}
 
 storm_data <- storm_data %>% filter(year >= 1993)
 
 ```
 
 ### Ommiting punctual odd reported damage cost observations
-There's one damages cost observation which is oddly high: a flood in 2006 in California with an associated damages cost of 115032500000 USD; to put this figure in context, the following reported damages cost was 31300000000 USD, associated to a Storm Surge/Tide in 2005 in Louisiana. It is likely a typo, which we ommit. 
+There's one damages cost observation which is oddly high: a flood in 2006 in California with an associated damages cost of 115032500000 USD; to put this figure in context, the following reported damages cost was 31300000000 USD, associated to a Storm Surge/Tide in 2005 in Louisiana. It is likely a typo, which we omit. 
 
 Also, there are a couple of suspiciously similar hurricanes (typhoons) in 2005 in Mississippi, both with associated costs of ~7400000000 USD, the difference is that one doesn't have reported human damages. It is likely a repeated observation, which we delete.
 
-```{r delete odd obs, message=FALSE}
+```{r delete odd obs, message=FALSE, warning=FALSE}
 
 ## typo in damages cost
-storm_data[storm_data$event_id == 605943,]$damages_cost <- NA
+storm_data[storm_data$event_id == 605943,]$damages_cost <- ifelse(test = is.na(storm_data[storm_data$event_id == 605943,]$damages_cost), storm_data[storm_data$event_id == 605943,]$damages_cost, NA)
 
 ## repeated observation
 storm_data <- storm_data[storm_data$event_id != 581533,] 
@@ -594,28 +600,186 @@ storm_data <- storm_data[storm_data$event_id != 581533,]
 ```
 
 #### Adjusting damages costs in USD for inflation
-TODO
+A dollar in 2011 is not the same as a dollar in 1993. We need to adjust for inflation the reported damages costs. 
+
+For this purpose, we use average annual Federal Reserve Bank of St. Louis' Consumer Price Index for All Urban Consumers (CPIAUCSL) from 1993 through 2011 as a measure of inflation. 
+
+The reported damages costs were adjusted for inflation using the scaled CPIAUCSL (taking 2011 CPI as reference, 100). The following chunk shows how this adjustment was performed. 
+
+```{r inflation-adjusting, message=FALSE, warning=FALSE}
+
+## Read in the CPIAUCSL data
+inflation_data <- read_csv(file = "CPIAUCSL.csv")
+
+## Get the average annual CPI and subset years 1993-2011
+annual_cpi_average <- inflation_data %>%
+  mutate(year = year(DATE)) %>%
+  group_by(year) %>%
+  summarise(annual_cpi = mean(CPIAUCSL)) %>%
+  filter((year <= 2011 & year >= 1993))
+
+## Get the value of 2011 CPI as a base
+base_cpi <-
+  annual_cpi_average[annual_cpi_average$year == 2011,]$annual_cpi
+
+## Scaling the annual CPI using the baseline as ref value
+annual_cpi_average <-
+  annual_cpi_average %>%
+  mutate(scaled_cpi = (annual_cpi / base_cpi) * 100)
+
+## Adjusting for inflation
+storm_data <- storm_data %>%
+  left_join(x = ., y = annual_cpi_average, by = "year") 
+
+storm_data <- storm_data %>% 
+  mutate(scaled_cost = (damages_cost / scaled_cpi) * 100)
+
+```
+
 
 ## Results
 
 ### Most harmful meteorological events
 
-Across the United States, which types of events (as indicated in the `EVTYPE` variable) are most harmful with respect to population health?
+#### Across the United States, which types of events are most harmful with respect to population health?
 
-```{r harmful events}
+To answer this question, we need to aggregate the reported causalties by weather event type; then, we show the most harmful events across the US from 1993 through 2011.
+
+```{r harmful events, cache=FALSE, warning=FALSE, message=FALSE}
+
+## Grouping, summarising and desc sorting dmg of weather events
+human_damages <- storm_data %>%
+  group_by(event_type) %>%
+  summarise(damages = sum(human_damage, na.rm = TRUE)) %>%
+  arrange(desc(damages)) %>% 
+  ungroup() %>%
+  mutate(percent = (damages / sum(damages)) * 100)
+
+## Logical vector of the events representing 90% of damages
+top90_damages <- round(cumsum((human_damages$percent))) <= 90
+
+human_damages <- human_damages[top90_damages, ]
 
 ```
 
+For illustrative purposes, we only plot the weather event types that represent the 90% of reported human causalties. 
+
+```{r plotting human damages, warning=FALSE}
+## Base bar plot with flipped axis
+hdmg_plot <- ggplot(data = human_damages, 
+       mapping = aes(x = reorder(event_type, damages), 
+                     y = damages, 
+                     fill = damages)) + 
+  geom_bar(stat = "identity") + 
+  coord_flip() + 
+  theme_bw(base_size = 12, base_family = "Helvetica") + 
+  ggtitle(
+    list(
+      subtitle = "Which events are most harmful with respect to population health?",
+      caption = "Total reported causalties (injuries + deaths) from 1993 through 2011\n",
+      x = "",
+      y = "\nNumber of Causalties"
+    )
+  )
+
+## Customizing the plot 
+hdmg_plot +
+  scale_fill_gradient2(
+    guide = FALSE,
+    high = "#D55E00",
+    mid = "#F0E442",
+    low = "#009E73",
+    midpoint = 5000,
+    name = "Damages Cost \n(in 2011 USD) \n"
+  ) +
+  scale_y_continuous(breaks = c(1500, 5000, 10000, 15000, 20000, 25000)) + 
+  geom_text(aes(label = paste0(reorder(
+    round(damages / 10 ^ 3, 1),
+    damages / 10 ^ 3
+  ), " K")),
+            hjust = 1.1)
+```
+
+As shown in the plot above, `r human_damages$event_type[which.max(x = human_damages$percent)]` is the most harmful weather event, which caused `r round(max(human_damages$percent),1)`% of human causalties from 1993 through 2011 across the US.
 
 ### Most costly meteorological events
 
-Across the United States, which types of events have the greatest economic consequences?
+#### Across the United States, which types of events have the greatest economic consequences?
 
-```{r costly events}
+Using the inflation-adjusted total damages cost, we're able to know the event type which has the greatest economic consequences. 
+
+We group the data by `event_type` and sum the reported damages costs of each event type. We bar plot them to show the most costly event types across US. 
+
+```{r costly events, cache=TRUE, warning=FALSE, message=FALSE}
+
+## Grouping, summarising and desc sorting costs of weather events
+costs_events <- storm_data %>%
+  group_by(event_type) %>%
+  summarise(cost = sum(scaled_cost, na.rm = TRUE)) %>%
+  arrange(desc(cost)) %>% 
+  ungroup %>%
+  mutate(percent = (cost / sum(cost)) * 100) 
+
+## Logical vector of the events representing 90% of costs
+top90_costs <- round(cumsum(costs_events$percent)) <= 90
+
+costs_events <- costs_events[top90_costs,] 
 
 ```
 
+For illustrative purposes, the events that represent the 90% of the total damages cost across US are shown (which also happen to be the top 10 most costly wheater event types).
+
+```{r plotting damages costs, warning=FALSE, message=FALSE}
+
+## Base plot
+costs_plot <- ggplot(data = costs_events, 
+       mapping = aes(x = reorder(event_type, cost), 
+                     y = cost, 
+                     fill = cost)) + 
+  geom_bar(stat = "identity") + 
+  coord_flip() + 
+  theme_bw(base_size = 12, base_family = "Helvetica") + 
+  ggtitle(
+    list(
+      subtitle = "Which Weather Events Have the Greatest Economic Consequences?",
+      caption = "Total damages costs (US Dollars) from 1993 through 2011, inflation-adjusted\n",
+      x = "",
+      y = "\nTotal Cost (2011 USD)"
+    )
+  )
+
+## Customized plot
+costs_plot +
+  geom_text(aes(label = paste0("$", reorder(
+    round(cost / 10 ^ 9, 1),
+    cost / 10 ^ 9
+  ), " B")),
+  hjust = 1.1) +
+  scale_fill_gradient2(
+    guide = FALSE,
+    high = "#D55E00",
+    mid = "#F0E442",
+    low = "#009E73",
+    midpoint = 2.2e10,
+    name = "Damages Cost \n(in 2011 USD) \n"
+  ) +
+  scale_y_continuous(breaks = c(8e10, 5e10, 3e10, 1e10),
+                     labels = paste0("$", c(80, 50, 30, 10), " Billion"))
+
+```
+
+As shown in the plot above, `r costs_events$event_type[which.max(x = costs_events$percent)]` is the weather event that caused the most economic damage from 1993 through 2011 across the US, accounting for `r round(max(costs_events$percent),1)`% of the total costs. 
+
 
 ## References
+
+1. National Centers for Environmental Information -- National Oceanic and Athmospheric Administration, Storm Events Database. URL: https://www.ncdc.noaa.gov/stormevents/ (Accessed on: `r Sys.Date()`)
+
+2. National Centers for Environmental Information -- National Oceanic and Athmospheric Administration, Storm Data FAQ. URL: https://www.ncdc.noaa.gov/stormevents/faq.jsp (Accessed on: `r Sys.Date()`)
+
+3. National Centers for Environmental Information -- National Oceanic and Athmospheric Administration, NOAA's NWS Documentation. URL: http://www.nws.noaa.gov/directives/sym/pd01016005curr.pdf (Accessed on: `r Sys.Date()`)
+
+4. U.S. Bureau of Labor Statistics, Consumer Price Index for All Urban Consumers: All Items [CPIAUCSL], retrieved from FRED, Federal Reserve Bank of St. Louis; URL: https://fred.stlouisfed.org/series/CPIAUCSL (Accessed on: `r Sys.Date()`)
+
 
 
