@@ -1,10 +1,11 @@
-# Finding the Most Severe Weather Events in the US
-Juan C. López Tavera  
-11/8/2017  
-#### Project Setup
+Finding the Most Severe Weather Events in the US
+================================================
 
+Juan C. López Tavera
+11/8/2017
+\#\#\#\# Project Setup
 
-```r
+``` r
 ## Loading the required packages for reproducing the report
 pkgs <-
   c("data.table",
@@ -42,65 +43,63 @@ knitr::opts_chunk$set(
 
 #### Session Info
 
-
-```r
+``` r
 sessionInfo()
 ```
 
-```
-## R version 3.4.1 (2017-06-30)
-## Platform: x86_64-apple-darwin15.6.0 (64-bit)
-## Running under: macOS High Sierra 10.13.1
-## 
-## Matrix products: default
-## BLAS: /Library/Frameworks/R.framework/Versions/3.4/Resources/lib/libRblas.0.dylib
-## LAPACK: /Library/Frameworks/R.framework/Versions/3.4/Resources/lib/libRlapack.dylib
-## 
-## locale:
-## [1] en_US.UTF-8/en_US.UTF-8/en_US.UTF-8/C/en_US.UTF-8/en_US.UTF-8
-## 
-## attached base packages:
-## [1] stats     graphics  grDevices utils     datasets  methods   base     
-## 
-## other attached packages:
-##  [1] stringdist_0.9.4.6 knitr_1.17         dplyr_0.7.4       
-##  [4] purrr_0.2.3        readr_1.1.1        tidyr_0.7.1       
-##  [7] tibble_1.3.4       ggplot2_2.2.1      tidyverse_1.1.1   
-## [10] R.utils_2.5.0      R.oo_1.21.0        R.methodsS3_1.7.1 
-## [13] data.table_1.10.4 
-## 
-## loaded via a namespace (and not attached):
-##  [1] Rcpp_0.12.13     formatR_1.5      cellranger_1.1.0 compiler_3.4.1  
-##  [5] plyr_1.8.4       bindr_0.1        forcats_0.2.0    tools_3.4.1     
-##  [9] digest_0.6.12    lubridate_1.6.0  jsonlite_1.5     evaluate_0.10.1 
-## [13] nlme_3.1-131     gtable_0.2.0     lattice_0.20-35  pkgconfig_2.0.1 
-## [17] rlang_0.1.2      psych_1.7.8      yaml_2.1.14      parallel_3.4.1  
-## [21] haven_1.1.0      bindrcpp_0.2     xml2_1.1.1       httr_1.3.1      
-## [25] stringr_1.2.0    hms_0.3          rprojroot_1.2    grid_3.4.1      
-## [29] glue_1.1.1       R6_2.2.2         readxl_1.0.0     foreign_0.8-69  
-## [33] rmarkdown_1.6    modelr_0.1.1     reshape2_1.4.2   magrittr_1.5    
-## [37] scales_0.5.0     backports_1.1.1  htmltools_0.3.6  rvest_0.3.2     
-## [41] assertthat_0.2.0 mnormt_1.5-5     colorspace_1.3-2 stringi_1.1.5   
-## [45] lazyeval_0.2.0   munsell_0.4.3    broom_0.4.2
-```
+    ## R version 3.4.1 (2017-06-30)
+    ## Platform: x86_64-apple-darwin15.6.0 (64-bit)
+    ## Running under: macOS High Sierra 10.13.1
+    ## 
+    ## Matrix products: default
+    ## BLAS: /Library/Frameworks/R.framework/Versions/3.4/Resources/lib/libRblas.0.dylib
+    ## LAPACK: /Library/Frameworks/R.framework/Versions/3.4/Resources/lib/libRlapack.dylib
+    ## 
+    ## locale:
+    ## [1] en_US.UTF-8/en_US.UTF-8/en_US.UTF-8/C/en_US.UTF-8/en_US.UTF-8
+    ## 
+    ## attached base packages:
+    ## [1] stats     graphics  grDevices utils     datasets  methods   base     
+    ## 
+    ## other attached packages:
+    ##  [1] stringdist_0.9.4.6 knitr_1.17         dplyr_0.7.4       
+    ##  [4] purrr_0.2.3        readr_1.1.1        tidyr_0.7.1       
+    ##  [7] tibble_1.3.4       ggplot2_2.2.1      tidyverse_1.1.1   
+    ## [10] R.utils_2.5.0      R.oo_1.21.0        R.methodsS3_1.7.1 
+    ## [13] data.table_1.10.4 
+    ## 
+    ## loaded via a namespace (and not attached):
+    ##  [1] Rcpp_0.12.13     formatR_1.5      cellranger_1.1.0 compiler_3.4.1  
+    ##  [5] plyr_1.8.4       bindr_0.1        forcats_0.2.0    tools_3.4.1     
+    ##  [9] digest_0.6.12    lubridate_1.6.0  jsonlite_1.5     evaluate_0.10.1 
+    ## [13] nlme_3.1-131     gtable_0.2.0     lattice_0.20-35  pkgconfig_2.0.1 
+    ## [17] rlang_0.1.2      psych_1.7.8      yaml_2.1.14      parallel_3.4.1  
+    ## [21] haven_1.1.0      bindrcpp_0.2     xml2_1.1.1       httr_1.3.1      
+    ## [25] stringr_1.2.0    hms_0.3          rprojroot_1.2    grid_3.4.1      
+    ## [29] glue_1.1.1       R6_2.2.2         readxl_1.0.0     foreign_0.8-69  
+    ## [33] rmarkdown_1.6    modelr_0.1.1     reshape2_1.4.2   magrittr_1.5    
+    ## [37] scales_0.5.0     backports_1.1.1  htmltools_0.3.6  rvest_0.3.2     
+    ## [41] assertthat_0.2.0 mnormt_1.5-5     colorspace_1.3-2 stringi_1.1.5   
+    ## [45] lazyeval_0.2.0   munsell_0.4.3    broom_0.4.2
 
-## Introduction
+Introduction
+------------
 
-This is a reproducible research report made with knitr for completing the requirements of the Reproducible Research Course by Johns Hopkins University at Coursera. 
+This is a reproducible research report made with knitr for completing the requirements of the Reproducible Research Course by Johns Hopkins University at Coursera.
 
-This documents describe the exploration of U.S. National Oceanic and Atmospheric Administration's (NOAA) storm database, which tracks weather phenomena, their characteristics and associated casualties. 
+This documents describe the exploration of U.S. National Oceanic and Atmospheric Administration's (NOAA) storm database, which tracks weather phenomena, their characteristics and associated casualties.
 
 The main objective of this data exploration is to answer the questions:
 
-1. Across the USA, which types of events are most harmful with respect to population health?
-2. Across the USA, which types of events have the greatest economic consequences?
+1.  Across the USA, which types of events are most harmful with respect to population health?
+2.  Across the USA, which types of events have the greatest economic consequences?
 
-## Getting and loading the data
+Getting and loading the data
+----------------------------
 
-First, if necessary, we download the data BZ2 file from the link provided in the course assignment page; then, we read the data into the working environment, and conveniently cache the result of the computation.  
+First, if necessary, we download the data BZ2 file from the link provided in the course assignment page; then, we read the data into the working environment, and conveniently cache the result of the computation.
 
-
-```r
+``` r
 ## Downloading the data from the URL in the course assignment page
 URL <- "https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2FStormData.csv.bz2"
 path <- paste0(getwd(), "/repdata%2Fdata%2FStormData.csv.bz2")
@@ -125,7 +124,8 @@ if (!file.exists(path)) {
 }
 ```
 
-## Dataset Structure
+Dataset Structure
+-----------------
 
 We have a tibble data frame of 902297 rows by 37 columns, with 6645765 missing values, which are 19.91% of the observations.
 
@@ -133,22 +133,21 @@ We have a tibble data frame of 902297 rows by 37 columns, with 6645765 missing v
 
 The NOAA storm data set we're using has many variables, but not all of them fall into the scope of this report, which focuses on knowing the human and economic damages caused by reported weather events. Knowing beforehand which variables we're using will speed-up the data processing and analysis.
 
-From the 37 variables in the data set, we're only focusing on: 
+From the 37 variables in the data set, we're only focusing on:
 
-1. `REFNUM`: The reference number assigned to each weather event.
-2. `STATE`: The state name abbreviation where each weather event occurred. 
-3. `BGN_DATE`: The reported date when each weather event was was first noticeable.
-4. `END_DATE`: The reported date when each weather event ceased. 
-5. `EVTYPE`: The classification of each weather event as one of the 48 types defined by the NOAA.
-6. `FATALITIES`: The number of direct and indirect human lives lost due to each weather event. 
-7. `INJURIES`: The number of reported injuries caused by each weather event.
-8. `PROPDMG`: The cost of property damage in USD (raw)
-9. `CROPDMG`: The cost of agricultural losses/damage in USD (raw)
+1.  `REFNUM`: The reference number assigned to each weather event.
+2.  `STATE`: The state name abbreviation where each weather event occurred.
+3.  `BGN_DATE`: The reported date when each weather event was was first noticeable.
+4.  `END_DATE`: The reported date when each weather event ceased.
+5.  `EVTYPE`: The classification of each weather event as one of the 48 types defined by the NOAA.
+6.  `FATALITIES`: The number of direct and indirect human lives lost due to each weather event.
+7.  `INJURIES`: The number of reported injuries caused by each weather event.
+8.  `PROPDMG`: The cost of property damage in USD (raw)
+9.  `CROPDMG`: The cost of agricultural losses/damage in USD (raw)
 
-Now, we subset the NOAA data set: 
+Now, we subset the NOAA data set:
 
-
-```r
+``` r
 storm_data <- storm_data %>% select(event_id = REFNUM, STATE, BGN_DATE, END_DATE, 
     EVTYPE, FATALITIES, INJURIES, PROPDMG, PROPDMGEXP, CROPDMG, CROPDMGEXP)
 ```
@@ -157,8 +156,7 @@ So we have a tibble data frame —subset of the NOAA data set provided at the Re
 
 The classes of our NOAA storm database, `storm_data`, and the proportion of missing values for each column are shown in the following table:
 
-
-```r
+``` r
 ## We make a tbl of column classes, the percentage of NAs; and display it
 classes <- sapply(storm_data, class) %>% as_data_frame() %>% rownames_to_column("Variable") %>% 
     select(Variable, Type = value)
@@ -176,57 +174,52 @@ classes %>% arrange(desc(`Unique Values`), desc(`Percent of NAs`)) %>% kable(x =
     align = c("l", "c", "r", "r"))
 ```
 
+| Variable   |    Type   |  Percent of NAs|  Unique Values|
+|:-----------|:---------:|---------------:|--------------:|
+| event\_id  |  numeric  |             0 %|         902297|
+| BGN\_DATE  | character |             0 %|          16335|
+| END\_DATE  | character |         26.98 %|           6663|
+| PROPDMG    |  numeric  |             0 %|           1390|
+| EVTYPE     | character |             0 %|            985|
+| CROPDMG    |  numeric  |             0 %|            432|
+| INJURIES   |  numeric  |             0 %|            200|
+| STATE      | character |             0 %|             72|
+| FATALITIES |  numeric  |             0 %|             52|
+| PROPDMGEXP | character |         51.64 %|             19|
+| CROPDMGEXP | character |         68.54 %|              9|
 
+Cleaning the data
+-----------------
 
-Variable        Type       Percent of NAs   Unique Values
------------  -----------  ---------------  --------------
-event_id       numeric                0 %          902297
-BGN_DATE      character               0 %           16335
-END_DATE      character           26.98 %            6663
-PROPDMG        numeric                0 %            1390
-EVTYPE        character               0 %             985
-CROPDMG        numeric                0 %             432
-INJURIES       numeric                0 %             200
-STATE         character               0 %              72
-FATALITIES     numeric                0 %              52
-PROPDMGEXP    character           51.64 %              19
-CROPDMGEXP    character           68.54 %               9
+### Data cleaning tasks
 
-## Cleaning the data
+Looking at the data set, we can notice a couple of major oddities, which should be solved by cleaning the data set:
 
-### Data cleaning tasks 
+1.  The number of unique States in `STATE` is 72, while it should be 50.
+2.  The number of different events `EVTYPE` is 985, while the NOAA has defined just 48.
+3.  It is already known that `PROPDMG` and `CROPDMG` are not expressed as final USD amounts, but need to be multiplied by the factors `PROPDMG` and `PROPDMG` respectively. `PROPDMG` and `PROPDMG` should be of equal length though.
 
-Looking at the data set, we can notice a couple of major oddities, which should be solved by cleaning the data set: 
+What causes such incongruities? How can we make our data set more consistent with the phenomena it characterizes? These are questions that we shall answer in the Data Processing section.
 
-1. The number of unique States in `STATE` is 72, while it should be 50.
-2. The number of different events `EVTYPE` is 985, while the NOAA has defined just 48.
-3. It is already known that `PROPDMG` and `CROPDMG` are not expressed as final USD amounts, but need to be multiplied by the factors `PROPDMG` and `PROPDMG` respectively. `PROPDMG` and `PROPDMG` should be of equal length though. 
-
-What causes such incongruities? How can we make our data set more consistent with the phenomena it characterizes? These are questions that we shall answer in the Data Processing section. 
-
-### Data Processing 
+### Data Processing
 
 #### Solving the state abbreviations issue
 
 As mentioned above, we need to investigate why to we have 72 states instead of 50. Conveniently, the `datasets` package includes the full and abbreviated names of US states, which we can use to match with our data set abbreviations. Let's take a closer look at the non-matching state abbreviations:
 
-
-```r
+``` r
 data(state)
 states <- cbind.data.frame(state.abb, state.name)
 
 setdiff(x = storm_data$STATE, y = states$state.abb)
 ```
 
-```
-##  [1] "DC" "PR" "ST" "AS" "GU" "MH" "VI" "AM" "LC" "PH" "GM" "PZ" "AN" "LH"
-## [15] "LM" "LE" "LS" "SL" "LO" "PM" "PK" "XX"
-```
+    ##  [1] "DC" "PR" "ST" "AS" "GU" "MH" "VI" "AM" "LC" "PH" "GM" "PZ" "AN" "LH"
+    ## [15] "LM" "LE" "LS" "SL" "LO" "PM" "PK" "XX"
 
-We can tell that some of those abbreviations are US District, Territories, water bodies and regions. We manually record those values and check if there are still any unmatched. 
+We can tell that some of those abbreviations are US District, Territories, water bodies and regions. We manually record those values and check if there are still any unmatched.
 
-
-```r
+``` r
 places <- c(DC = "District of Columbia", PR = "Puerto Rico", AS = "American Samoa", 
     GU = "Guam", MH = "Marshall Islands", VI = "Virgin Islands", LO = "Lake Ontario", 
     LE = "Lake Erie", LS = "Lake Superior", LM = "Lake Michigan", LH = "Lake Huron", 
@@ -240,11 +233,9 @@ states <- cbind.data.frame(STATE = state.abb, state = state.name)
 setdiff(states$STATE, storm_data$STATE)
 ```
 
-```
-## character(0)
-```
+    ## character(0)
 
-```r
+``` r
 storm_data <- left_join(x = storm_data, states, by = "STATE")
 
 storm_data <- storm_data %>% select(-STATE)
@@ -254,26 +245,25 @@ All state (or places, should we say) abbreviations in our data set now have a ma
 
 #### Solving the too many event types issue
 
-There are 985 different values in the `EVTYPE` variable; there should only be 48. We have to, somehow, categorize the remaining 937 unique values as one of the official 48 weather event types. 
+There are 985 different values in the `EVTYPE` variable; there should only be 48. We have to, somehow, categorize the remaining 937 unique values as one of the official 48 weather event types.
 
-A lot of the surplus in event types is due to typos (human errors). Also, there are inconsistencies in data entry, which can be noticed by reading the [data codebook](./docs/storm_data_preparation.pdf) provided by the NOAA; e.g. coding an event as "Microdust", while, in the manual, is categorized as "Thunderstorm Winds". 
+A lot of the surplus in event types is due to typos (human errors). Also, there are inconsistencies in data entry, which can be noticed by reading the [data codebook](./docs/storm_data_preparation.pdf) provided by the NOAA; e.g. coding an event as "Microdust", while, in the manual, is categorized as "Thunderstorm Winds".
 
 We can solve many of these inconsistencies by matching them with the closest official `EVTYPE` string. We do this using the longest common substring method:
 
 "The longest common substring (method='lcs') is defined as the longest string that can be obtained by pairing characters from a and b while keeping the order of characters intact. The lcs-distance is defined as the number of unpaired characters. The distance is equivalent to the edit distance allowing only deletions and insertions, each with weight one."
 
-* van der Loo M (2014). “The stringdist package for approximate string matching.” _The R Journal_, *6*, pp. 111-122. <URL: https://CRAN.R-project.org/package=stringdist>.
+-   van der Loo M (2014). “The stringdist package for approximate string matching.” *The R Journal*, *6*, pp. 111-122. &lt;URL: https://CRAN.R-project.org/package=stringdist&gt;.
 
 In this case, given an official event type, we pair it with the closest element of `EVTYPE`. The drawback of this approach is that we got many "false positives" -- like "fog" being matched to "flood", instead of "dense fog".
 
-Given that there are many values in `EVTYPE` that are semantically close to the official event types, but not string-distance close, and the false positive matches, there was still a lot of manual work to do. 
+Given that there are many values in `EVTYPE` that are semantically close to the official event types, but not string-distance close, and the false positive matches, there was still a lot of manual work to do.
 
-The series of code chunks below has all the steps to arrive at the clean `EVTYPE` variable. 
+The series of code chunks below has all the steps to arrive at the clean `EVTYPE` variable.
 
-We need to define the target `EVTYPE` values, which are the 48 official event types defined by the NOAA: 
+We need to define the target `EVTYPE` values, which are the 48 official event types defined by the NOAA:
 
-
-```r
+``` r
 official_events <- c("Astronomical Low Tide", "Astronomical High Tide", "Avalanche", 
     "Blizzard", "Coastal Flood", "Cold/Wind Chill", "Dense Fog", "Dense Smoke", "Drought", 
     "Dust Devil", "Dust Storm", "Excessive Heat", "Extreme Cold/Wind Chill", "Flash Flood", 
@@ -285,19 +275,17 @@ official_events <- c("Astronomical Low Tide", "Astronomical High Tide", "Avalanc
     "Tsunami", "Volcanic Ash", "Waterspout", "Wildfire", "Winter Storm", "Winter Weather")
 ```
 
-We do some general manual substitutions to make all strings a bit more similar: everything lower case, delete non-alphanumeric characters, and "and" words.  
+We do some general manual substitutions to make all strings a bit more similar: everything lower case, delete non-alphanumeric characters, and "and" words.
 
-
-```r
+``` r
 storm_data <- storm_data %>% mutate(EVTYPE = tolower(EVTYPE), EVTYPE = gsub(pattern = "[^[:alpha:]]+", 
     replacement = " ", x = EVTYPE), EVTYPE = gsub(pattern = "and", replacement = " ", 
     x = EVTYPE, fixed = TRUE))
 ```
 
-After reading the [data codebook](./docs/storm_data_preparation.pdf), many semantic mismatches were evident: 
+After reading the [data codebook](./docs/storm_data_preparation.pdf), many semantic mismatches were evident:
 
-
-```r
+``` r
 ## Semantic substitutions, from the codebook tstm --> thunderstorm: very common,
 ## not close for string matching
 storm_data$EVTYPE <- gsub(pattern = "tstm", replacement = "thunderstorm", x = storm_data$EVTYPE)
@@ -378,10 +366,9 @@ storm_data$EVTYPE[grepl(pattern = paste(others, collapse = "|"), x = storm_data$
     ignore.case = TRUE)] <- "Other"
 ```
 
-We have a slightly more homogeneous `EVTYPE` variable that is close enough to the official name events. We use the longest common substring method to find how close are each of the values in `EVTYPE` to each of the `official_events`. 
+We have a slightly more homogeneous `EVTYPE` variable that is close enough to the official name events. We use the longest common substring method to find how close are each of the values in `EVTYPE` to each of the `official_events`.
 
-
-```r
+``` r
 ## Distance matrix of official_events by EVTYPE
 lcs_dist <- sapply(X = tolower(official_events), FUN = function(x) {
     stringdist(tolower(storm_data$EVTYPE), x, method = "lcs")
@@ -396,29 +383,25 @@ storm_data$event_type <- official_events[min_lcs]
 storm_data <- storm_data %>% select(-EVTYPE)
 ```
 
-
 #### Estimating the human casualties
 
-Sadly, these weather events cause human deaths and injuries; these numbers are recorded by the NOAA, and will be added to fulfill the definition of "harmful to human health" specified in this document. 
+Sadly, these weather events cause human deaths and injuries; these numbers are recorded by the NOAA, and will be added to fulfill the definition of "harmful to human health" specified in this document.
 
-
-```r
+``` r
 storm_data$human_damage <- storm_data$INJURIES + storm_data$FATALITIES
 
 storm_data <- storm_data %>% select(-c(INJURIES, FATALITIES))
 ```
 
-
 #### Calculating the and economic damage to crops and properties
 
 The numbers of human causalities and economic damages are not expressed in their final form; they're rather expressed as coefficients of 10 raised to some power of ten.
 
-`PROPDMG` needs to be multiplied by `PROPDMGEXP` elevated to some power of ten; the same for `CROPDMG * (CROPDMGEXP ^ n)`. 
+`PROPDMG` needs to be multiplied by `PROPDMGEXP` elevated to some power of ten; the same for `CROPDMG * (CROPDMGEXP ^ n)`.
 
-`PROPDMGEXP` and `CROPDMGEXP` are not explicitly defined as powers of then but rather as some sort abbreviated metric prefixes: "k" (kilo), "m" (mega or millions), "b" (billions). 
+`PROPDMGEXP` and `CROPDMGEXP` are not explicitly defined as powers of then but rather as some sort abbreviated metric prefixes: "k" (kilo), "m" (mega or millions), "b" (billions).
 
-
-```r
+``` r
 ## we have unequal lengths of EXP variables, we unify them by transforming them to
 ## lowercase
 storm_data$PROPDMGEXP <- tolower(storm_data$PROPDMGEXP)
@@ -456,9 +439,9 @@ storm_data <- storm_data %>% mutate(property_damage = ifelse(is.na(prop_dmg_exp)
     select(-c(contains(match = "dmg", ignore.case = TRUE)), -c(property_damage, crop_damage))
 ```
 
-#### Usable dates 
+#### Usable dates
 
-```r
+``` r
 storm_data <- storm_data %>% mutate(BGN_DATE = parse_datetime(x = BGN_DATE, format = "%m/%d/%Y %H:%M:%S"), 
     END_DATE = parse_datetime(x = END_DATE, format = "%m/%d/%Y %H:%M:%S")) %>% mutate(year = ifelse((is.na(END_DATE) | 
     year(BGN_DATE) >= year(END_DATE)), year(BGN_DATE), year(END_DATE))) %>% select(-c(BGN_DATE, 
@@ -466,20 +449,20 @@ storm_data <- storm_data %>% mutate(BGN_DATE = parse_datetime(x = BGN_DATE, form
 ```
 
 ### Subsetting information-rich years
-Not all years the NOAA used to record a wide variety of weather events: before 1993, it only recorded 3 different types of events, which inflates the count of reported events (for Tornado, Thunderstorm Wind and Hail), subsequently biasing the estimates of human and economic damages. 
 
+Not all years the NOAA used to record a wide variety of weather events: before 1993, it only recorded 3 different types of events, which inflates the count of reported events (for Tornado, Thunderstorm Wind and Hail), subsequently biasing the estimates of human and economic damages.
 
-```r
+``` r
 storm_data <- storm_data %>% filter(year >= 1993)
 ```
 
 ### Ommiting punctual odd reported damage cost observations
-There's one damages cost observation which is oddly high: a flood in 2006 in California with an associated damages cost of 115032500000 USD; to put this figure in context, the following reported damages cost was 31300000000 USD, associated to a Storm Surge/Tide in 2005 in Louisiana. It is likely a typo, which we omit. 
+
+There's one damages cost observation which is oddly high: a flood in 2006 in California with an associated damages cost of 115032500000 USD; to put this figure in context, the following reported damages cost was 31300000000 USD, associated to a Storm Surge/Tide in 2005 in Louisiana. It is likely a typo, which we omit.
 
 Also, there are a couple of suspiciously similar hurricanes (typhoons) in 2005 in Mississippi, both with associated costs of ~7400000000 USD, the difference is that one doesn't have reported human damages. It is likely a repeated observation, which we delete.
 
-
-```r
+``` r
 ## typo in damages cost
 storm_data[storm_data$event_id == 605943, ]$damages_cost <- ifelse(test = is.na(storm_data[storm_data$event_id == 
     605943, ]$damages_cost), storm_data[storm_data$event_id == 605943, ]$damages_cost, 
@@ -490,14 +473,14 @@ storm_data <- storm_data[storm_data$event_id != 581533, ]
 ```
 
 #### Adjusting damages costs in USD for inflation
-A dollar in 2011 is not the same as a dollar in 1993. We need to adjust for inflation the reported damages costs. 
 
-For this purpose, we use average annual Federal Reserve Bank of St. Louis' Consumer Price Index for All Urban Consumers (CPIAUCSL) from 1993 through 2011 as a measure of inflation. 
+A dollar in 2011 is not the same as a dollar in 1993. We need to adjust for inflation the reported damages costs.
 
-The reported damages costs were adjusted for inflation using the scaled CPIAUCSL (taking 2011 CPI as reference, 100). The following chunk shows how this adjustment was performed. 
+For this purpose, we use average annual Federal Reserve Bank of St. Louis' Consumer Price Index for All Urban Consumers (CPIAUCSL) from 1993 through 2011 as a measure of inflation.
 
+The reported damages costs were adjusted for inflation using the scaled CPIAUCSL (taking 2011 CPI as reference, 100). The following chunk shows how this adjustment was performed.
 
-```r
+``` r
 ## Read in the CPIAUCSL data
 inflation_data <- read_csv(file = "CPIAUCSL.csv")
 
@@ -518,8 +501,8 @@ storm_data <- storm_data %>% left_join(x = ., y = annual_cpi_average, by = "year
 storm_data <- storm_data %>% mutate(scaled_cost = (damages_cost/scaled_cpi) * 100)
 ```
 
-
-## Results
+Results
+-------
 
 ### Most harmful meteorological events
 
@@ -527,8 +510,7 @@ storm_data <- storm_data %>% mutate(scaled_cost = (damages_cost/scaled_cpi) * 10
 
 To answer this question, we need to aggregate the reported causalties by weather event type; then, we show the most harmful events across the US from 1993 through 2011.
 
-
-```r
+``` r
 ## Grouping, summarising and desc sorting dmg of weather events
 human_damages <- storm_data %>% group_by(event_type) %>% summarise(damages = sum(human_damage, 
     na.rm = TRUE)) %>% arrange(desc(damages)) %>% ungroup() %>% mutate(percent = (damages/sum(damages)) * 
@@ -540,10 +522,9 @@ top90_damages <- round(cumsum((human_damages$percent))) <= 90
 human_damages <- human_damages[top90_damages, ]
 ```
 
-For illustrative purposes, we only plot the weather event types that represent the 90% of reported human causalties. 
+For illustrative purposes, we only plot the weather event types that represent the 90% of reported human causalties.
 
-
-```r
+``` r
 ## Base bar plot with flipped axis
 hdmg_plot <- ggplot(data = human_damages, mapping = aes(x = reorder(event_type, damages), 
     y = damages, fill = damages)) + geom_bar(stat = "identity") + coord_flip() + 
@@ -566,12 +547,11 @@ As shown in the plot above, Tornado is the most harmful weather event, which cau
 
 #### Across the United States, which types of events have the greatest economic consequences?
 
-Using the inflation-adjusted total damages cost, we're able to know the event type which has the greatest economic consequences. 
+Using the inflation-adjusted total damages cost, we're able to know the event type which has the greatest economic consequences.
 
-We group the data by `event_type` and sum the reported damages costs of each event type. We bar plot them to show the most costly event types across US. 
+We group the data by `event_type` and sum the reported damages costs of each event type. We bar plot them to show the most costly event types across US.
 
-
-```r
+``` r
 ## Grouping, summarising and desc sorting costs of weather events
 costs_events <- storm_data %>% group_by(event_type) %>% summarise(cost = sum(scaled_cost, 
     na.rm = TRUE)) %>% arrange(desc(cost)) %>% ungroup %>% mutate(percent = (cost/sum(cost)) * 
@@ -585,8 +565,7 @@ costs_events <- costs_events[top90_costs, ]
 
 For illustrative purposes, the events that represent the 90% of the total damages cost across US are shown (which also happen to be the top 10 most costly wheater event types).
 
-
-```r
+``` r
 ## Base plot
 costs_plot <- ggplot(data = costs_events, mapping = aes(x = reorder(event_type, cost), 
     y = cost, fill = cost)) + geom_bar(stat = "identity") + coord_flip() + theme_bw(base_size = 12, 
@@ -604,18 +583,17 @@ costs_plot + geom_text(aes(label = paste0("$", reorder(round(cost/10^9, 1), cost
 
 <img src="figure/plotting damages costs-1.png" style="display: block; margin: auto;" />
 
-As shown in the plot above, Hurricane (Typhoon) is the weather event that caused the most economic damage from 1993 through 2011 across the US, accounting for 25.3% of the total costs. 
+As shown in the plot above, Hurricane (Typhoon) is the weather event that caused the most economic damage from 1993 through 2011 across the US, accounting for 25.3% of the total costs.
 
+References
+----------
 
-## References
+1.  National Centers for Environmental Information -- National Oceanic and Athmospheric Administration, Storm Events Database. URL: https://www.ncdc.noaa.gov/stormevents/ (Accessed on: 2017-11-09)
 
-1. National Centers for Environmental Information -- National Oceanic and Athmospheric Administration, Storm Events Database. URL: https://www.ncdc.noaa.gov/stormevents/ (Accessed on: 2017-11-09)
+2.  National Centers for Environmental Information -- National Oceanic and Athmospheric Administration, Storm Data FAQ. URL: https://www.ncdc.noaa.gov/stormevents/faq.jsp (Accessed on: 2017-11-09)
 
-2. National Centers for Environmental Information -- National Oceanic and Athmospheric Administration, Storm Data FAQ. URL: https://www.ncdc.noaa.gov/stormevents/faq.jsp (Accessed on: 2017-11-09)
+3.  National Centers for Environmental Information -- National Oceanic and Athmospheric Administration, NOAA's NWS Documentation. URL: http://www.nws.noaa.gov/directives/sym/pd01016005curr.pdf (Accessed on: 2017-11-09)
 
-3. National Centers for Environmental Information -- National Oceanic and Athmospheric Administration, NOAA's NWS Documentation. URL: http://www.nws.noaa.gov/directives/sym/pd01016005curr.pdf (Accessed on: 2017-11-09)
-
-4. U.S. Bureau of Labor Statistics, Consumer Price Index for All Urban Consumers: All Items [CPIAUCSL], retrieved from FRED, Federal Reserve Bank of St. Louis; URL: https://fred.stlouisfed.org/series/CPIAUCSL (Accessed on: 2017-11-09)
-
+4.  U.S. Bureau of Labor Statistics, Consumer Price Index for All Urban Consumers: All Items \[CPIAUCSL\], retrieved from FRED, Federal Reserve Bank of St. Louis; URL: https://fred.stlouisfed.org/series/CPIAUCSL (Accessed on: 2017-11-09)
 
 
